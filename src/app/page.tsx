@@ -7,9 +7,9 @@ export default function Home() {
   const features = [
     {
       title: 'TV Groups',
-      description: 'View and manage TV groups and unassigned devices.',
-      href: '/dashboard',
-      icon: <Monitor className="h-8 w-8" />,
+      description: 'View, create, and manage your TV groups.',
+      href: '/groups',
+      icon: <Users className="h-8 w-8" />,
     },
     {
       title: 'TVs',
@@ -24,10 +24,10 @@ export default function Home() {
       icon: <Clapperboard className="h-8 w-8" />,
     },
      {
-      title: 'Playlists',
-      description: 'Create and edit ad playlists for your TV groups.',
-      href: '/dashboard', // Playlists are managed within groups on the dashboard
-      icon: <Users className="h-8 w-8" />,
+      title: 'Unassigned TVs',
+      description: 'View and manage TVs that are not yet in a group.',
+      href: '/dashboard', 
+      icon: <Monitor className="h-8 w-8" />,
     },
   ];
 

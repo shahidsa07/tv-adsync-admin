@@ -1,7 +1,7 @@
 'server-only';
 import { db } from '@/lib/firebase';
 import type { TV, Group, Ad, PriorityStream } from '@/lib/definitions';
-import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, deleteDoc } from 'firebase/firestore';
 
 // --- GETTERS ---
 
@@ -68,6 +68,11 @@ export const createGroup = async (name: string): Promise<Group> => {
     };
     await setDoc(doc(db, "groups", id), newGroup);
     return newGroup;
+};
+
+export const deleteGroup = async (groupId: string): Promise<void> => {
+    const docRef = doc(db, "groups", groupId);
+    await deleteDoc(docRef);
 };
 
 export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'groupId'>>): Promise<TV | undefined> => {

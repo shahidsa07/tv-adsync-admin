@@ -8,12 +8,26 @@ import type { Ad, PriorityStream } from './definitions'
 export async function createGroupAction(name: string) {
   try {
     await data.createGroup(name);
-    revalidatePath('/')
+    revalidatePath('/groups');
     revalidatePath('/dashboard');
     return { success: true, message: `Group "${name}" created.` }
   } catch (error) {
     return { success: false, message: "Failed to create group." }
   }
+}
+
+export async function deleteGroupAction(groupId: string) {
+    try {
+        const tvsInGroup = await data.getTvsByGroupId(groupId);
+        if (tvsInGroup.length > 0) {
+            return { success: false, message: "Cannot delete a group that has TVs assigned to it." };
+        }
+        await data.deleteGroup(groupId);
+        revalidatePath('/groups');
+        return { success: true, message: "Group deleted successfully." };
+    } catch (error) {
+        return { success: false, message: "Failed to delete group." };
+    }
 }
 
 export async function registerTvAction(tvId: string, name: string) {
@@ -51,6 +65,7 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
     revalidatePath('/');
     revalidatePath('/dashboard');
     revalidatePath('/tvs');
+    revalidatePath('/groups');
     if (groupId) {
       revalidatePath(`/groups/${groupId}`);
     }
@@ -69,6 +84,7 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
         await data.updateGroupTvs(groupId, tvIds);
         revalidatePath('/');
         revalidatePath('/dashboard');
+        revalidatePath('/groups');
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Group TVs updated.' };
     } catch (error) {
@@ -125,6 +141,7 @@ export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/tvs');
+        revalidatePath('/groups');
         
         // Find the TV to revalidate its group page if it has one
         const tv = await data.getTvById(tvId);
