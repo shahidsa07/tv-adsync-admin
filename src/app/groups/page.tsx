@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { GroupsClient } from '@/components/groups-client';
+import { seedInitialData } from '@/lib/seed';
 
 export default async function GroupsPage() {
+  await seedInitialData();
   const tvs = await getTvs();
   const groups = await getGroups();
 

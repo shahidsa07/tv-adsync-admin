@@ -1,9 +1,10 @@
+'server-only';
 import { db } from './firebase';
 
-const seedInitialData = async () => {
+export const seedInitialData = async () => {
     console.log('Checking for existing data...');
-    const tvsSnapshot = await db.collection('tvs').get();
-    const groupsSnapshot = await db.collection('groups').get();
+    const tvsSnapshot = await db.collection('tvs').limit(1).get();
+    const groupsSnapshot = await db.collection('groups').limit(1).get();
 
     if (!tvsSnapshot.empty || !groupsSnapshot.empty) {
         console.log('Data already exists. Skipping seed.');
@@ -54,8 +55,3 @@ const seedInitialData = async () => {
     await batch.commit();
     console.log('Initial data seeded successfully!');
 };
-
-seedInitialData().catch(error => {
-    console.error('Failed to seed initial data:', error);
-    process.exit(1);
-});
