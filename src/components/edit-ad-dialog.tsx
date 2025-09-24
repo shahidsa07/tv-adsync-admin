@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,6 +25,7 @@ export function EditAdDialog({ open, onOpenChange, ad }: EditAdDialogProps) {
   const [duration, setDuration] = useState(ad.duration || 15);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     setName(ad.name);
@@ -49,6 +51,7 @@ export function EditAdDialog({ open, onOpenChange, ad }: EditAdDialogProps) {
       if (result.success) {
         toast({ title: 'Success', description: result.message });
         onOpenChange(false);
+        router.refresh();
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
       }
