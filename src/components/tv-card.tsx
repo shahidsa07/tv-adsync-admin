@@ -4,7 +4,7 @@ import type { TV, Group } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Monitor, ArrowRight, Pencil, Check, X, Wifi, WifiOff } from 'lucide-react';
+import { Monitor, ArrowRight, Pencil, Check, X, Wifi, WifiOff, Loader2 } from 'lucide-react';
 import { AssignGroupDialog } from './assign-group-dialog';
 import { useState, useTransition } from 'react';
 import { Input } from './ui/input';
@@ -20,6 +20,7 @@ export function TvCard({ tv, groups }: TvCardProps) {
   const [isAssigning, setIsAssigning] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(tv.name);
+  const [isNamePending, startNameTransition] = useTransition();
   const [isStatusPending, startStatusTransition] = useTransition();
   const { toast } = useToast();
 
@@ -31,15 +32,18 @@ export function TvCard({ tv, groups }: TvCardProps) {
       setIsEditingName(false);
       return;
     }
-    const result = await updateTvNameAction(tv.tvId, newName);
-    if (result.success) {
-      toast({ title: 'Success', description: result.message });
-      // Note: in a real app, the tv prop would update via revalidation
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
-      setNewName(tv.name);
-    }
-    setIsEditingName(false);
+    startNameTransition(async () => {
+      const result = await updateTvNameAction(tv.tvId, newName);
+      if (result.success) {
+        toast({ title: 'Success', description: result.message });
+        // In a real app with subscriptions, you wouldn't need to manually update state
+        // but for now this keeps the UI in sync. We can also revalidate the path.
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.message });
+        setNewName(tv.name);
+      }
+      setIsEditingName(false);
+    });
   }
   
   const handleToggleOnlineStatus = () => {
@@ -60,9 +64,11 @@ export function TvCard({ tv, groups }: TvCardProps) {
           <div className="flex items-start justify-between">
             {isEditingName ? (
               <div className="flex items-center gap-2">
-                <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="h-9" />
-                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleNameUpdate}><Check className="h-4 w-4" /></Button>
-                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => setIsEditingName(false)}><X className="h-4 w-4" /></Button>
+                <Input value={newName} onChange={(e) => setNewName(e.target.value)} className="h-9" disabled={isNamePending} />
+                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={handleNameUpdate} disabled={isNamePending}>
+                  {isNamePending ? <Loader2 className="h-4 w-4 animate-spin"/> : <Check className="h-4 w-4" />}
+                </Button>
+                <Button size="icon" variant="ghost" className="h-9 w-9" onClick={() => setIsEditingName(false)} disabled={isNamePending}><X className="h-4 w-4" /></Button>
               </div>
             ) : (
               <CardTitle className="font-headline flex items-center gap-2 tracking-tight">
@@ -94,13 +100,13 @@ export function TvCard({ tv, groups }: TvCardProps) {
                     </Button>
                 )}
                 <Button variant="outline" className="w-full" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
-                    <WifiOff className="mr-2 h-4 w-4"/>
+                    {isStatusPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <WifiOff className="mr-2 h-4 w-4"/>}
                     Simulate Disconnect
                 </Button>
             </>
           ) : (
              <Button variant="outline" className="w-full" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
-                <Wifi className="mr-2 h-4 w-4"/>
+                {isStatusPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Wifi className="mr-2 h-4 w-4"/>}
                 Simulate Connect
             </Button>
           )}
