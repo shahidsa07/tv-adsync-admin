@@ -50,7 +50,7 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/groups');
-        revalidatePath(`/groups/${groupId}`);
+        revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Group TVs updated.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update group TVs.'
@@ -62,7 +62,7 @@ export async function updateGroupPlaylistAction(groupId: string, playlistId: str
     try {
         await data.updateGroup(groupId, { playlistId });
         notifyGroup(groupId);
-        revalidatePath(`/groups/${groupId}`);
+        revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Group playlist updated.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update playlist.'
@@ -115,7 +115,7 @@ export async function updateTvNameAction(tvId: string, name: string) {
     revalidatePath('/');
     revalidatePath('/dashboard');
     revalidatePath('/tvs');
-    revalidatePath(`/groups/`) // Also revalidate any group pages
+    revalidatePath('/groups', 'layout'); // Revalidate the groups layout to catch all potential pages
     return { success: true, message: `TV name updated to "${name}".` }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update TV name."
@@ -135,18 +135,13 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
     if(oldGroupId) {
         notifyGroup(oldGroupId);
     }
-
-    revalidatePath('/');
-    revalidatePath('/dashboard');
-    revalidatePath('/tvs');
-    revalidatePath('/groups');
+     // Also notify the group it was added to
     if (groupId) {
-      revalidatePath(`/groups/${groupId}`);
+        notifyGroup(groupId);
     }
-    const groups = await data.getGroups();
-    if (groups) {
-      groups.forEach(g => revalidatePath(`/groups/${g.id}`));
-    }
+
+
+    revalidatePath('/', 'layout');
 
     return { success: true, message: `TV assigned successfully.` }
   } catch (error)
@@ -159,15 +154,7 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
 export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
     try {
         await data.setTvOnlineStatus(tvId, isOnline, null); // Let the websocket server handle the socketId
-        revalidatePath('/');
-        revalidatePath('/dashboard');
-        revalidatePath('/tvs');
-        revalidatePath('/groups');
-        
-        const tv = await data.getTvById(tvId);
-        if (tv?.groupId) {
-            revalidatePath(`/groups/${tv.groupId}`);
-        }
+        revalidatePath('/', 'layout');
         
         return { success: true, message: `TV status updated.` };
     } catch (error) {
@@ -186,14 +173,7 @@ export async function deleteTvAction(tvId: string) {
         }
         await data.deleteTv(tvId);
 
-        revalidatePath('/');
-        revalidatePath('/dashboard');
-        revalidatePath('/tvs');
-        revalidatePath('/groups');
-        const groups = await data.getGroups();
-        if (groups) {
-          groups.forEach(g => revalidatePath(`/groups/${g.id}`));
-        }
+        revalidatePath('/', 'layout');
         return { success: true, message: 'TV deleted successfully.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to delete TV.'
@@ -207,7 +187,7 @@ export async function startPriorityStreamAction(groupId: string, stream: Priorit
     try {
         await data.updatePriorityStream(groupId, stream);
         notifyGroup(groupId);
-        revalidatePath(`/groups/${groupId}`);
+        revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Priority stream started.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to start priority stream.'
@@ -219,7 +199,7 @@ export async function stopPriorityStreamAction(groupId: string) {
     try {
         await data.updatePriorityStream(groupId, null);
         notifyGroup(groupId);
-        revalidatePath(`/groups/${groupId}`);
+        revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Priority stream stopped.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to stop priority stream.'
@@ -234,7 +214,7 @@ export async function createAdAction(name: string, type: 'image' | 'video', url:
     try {
         await data.createAd(name, type, url, duration);
         revalidatePath('/ads');
-        revalidatePath('/playlists'); // Revalidate all playlist pages
+        revalidatePath('/playlists', 'layout'); // Revalidate all playlist pages
         return { success: true, message: 'Ad created successfully.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to create ad.'
@@ -261,10 +241,8 @@ export async function deleteAdAction(adId: string) {
         affectedGroups.forEach(groupId => notifyGroup(groupId));
 
         revalidatePath('/ads');
-        revalidatePath('/playlists');
-        if (playlists) {
-            playlists.forEach(p => revalidatePath(`/playlists/${p.id}`));
-        }
+        revalidatePath('/playlists', 'layout');
+
 
         return { success: true, message: 'Ad deleted successfully.' };
     } catch (error) {
@@ -277,7 +255,7 @@ export async function createPlaylistAction(name: string) {
     try {
         await data.createPlaylist(name);
         revalidatePath('/playlists');
-        revalidatePath('/groups');
+        revalidatePath('/groups', 'layout');
         return { success: true, message: `Playlist "${name}" created.` };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to create playlist.'
@@ -294,7 +272,7 @@ export async function deletePlaylistAction(playlistId: string) {
         groups.forEach(group => notifyGroup(group.id));
         
         revalidatePath('/playlists');
-        revalidatePath('/groups');
+        revalidatePath('/groups', 'layout');
         return { success: true, message: 'Playlist deleted successfully.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to delete playlist.'
@@ -307,7 +285,7 @@ export async function updatePlaylistAdsAction(playlistId: string, adIds: string[
         await data.updatePlaylist(playlistId, { adIds });
         const groups = await data.getGroupsByPlaylistId(playlistId);
         groups.forEach(group => notifyGroup(group.id));
-        revalidatePath(`/playlists/${playlistId}`);
+        revalidatePath(`/playlists/${playlistId}`, 'page');
         return { success: true, message: 'Playlist updated.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update playlist.';
