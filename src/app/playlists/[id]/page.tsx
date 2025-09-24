@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import { PlaylistEditorClient } from '@/components/playlist-editor-client';
 
-export default async function PlaylistDetailsPage({ params }: { params: { id: string } }) {
-  const playlist = await getPlaylistById(params.id);
+export default async function PlaylistDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const playlist = await getPlaylistById(id);
   const allAds = await getAds();
 
   if (!playlist) {
