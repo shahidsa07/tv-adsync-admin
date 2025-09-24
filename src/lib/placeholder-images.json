@@ -1,3 +1,22 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "ad-image-1",
+      "description": "Abstract art for a digital ad",
+      "imageUrl": "https://images.unsplash.com/photo-1533157950006-c38844053d55?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxhYnN0cmFjdCUyMGFydHxlbnwwfHx8fDE3NTg2MDQxMTR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "abstract art"
+    },
+    {
+      "id": "ad-image-2",
+      "description": "Cityscape for a digital ad",
+      "imageUrl": "https://images.unsplash.com/photo-1690937956164-29ef80d706cb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjaXR5c2NhcGUlMjBuaWdodHxlbnwwfHx8fDE3NTg1OTg3Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cityscape night"
+    },
+    {
+      "id": "ad-image-3",
+      "description": "Nature scene for a digital ad",
+      "imageUrl": "https://images.unsplash.com/photo-1425913397330-cf8af2ff40a1?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxuYXR1cmUlMjBmb3Jlc3R8ZW58MHx8fHwxNzU4Njg0MDc3fDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "nature forest"
+    }
+  ]
 }
