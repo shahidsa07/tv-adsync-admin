@@ -1,4 +1,4 @@
-import { getTvs, getGroups } from '@/lib/data';
+import { getTvs, getGroups, getPlaylists } from '@/lib/data';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -10,6 +10,7 @@ export default async function GroupsPage() {
   await seedInitialData();
   const tvs = await getTvs();
   const groups = await getGroups();
+  const playlists = await getPlaylists();
 
   return (
     <div className="flex min-h-screen w-full flex-col">
@@ -23,7 +24,7 @@ export default async function GroupsPage() {
             </Link>
           </Button>
         </div>
-        <GroupsClient initialTvs={tvs} initialGroups={groups} />
+        <GroupsClient initialTvs={tvs} initialGroups={groups} initialPlaylists={playlists} />
       </main>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client"
 
-import type { TV, Group } from '@/lib/definitions';
+import type { TV, Group, Playlist } from '@/lib/definitions';
 import { useState } from 'react';
 import { GroupCard } from './group-card';
 import { CreateGroupDialog } from './create-group-dialog';
@@ -10,10 +10,12 @@ import { PlusCircle } from 'lucide-react';
 interface GroupsClientProps {
   initialTvs: TV[];
   initialGroups: Group[];
+  initialPlaylists: Playlist[];
 }
 
-export function GroupsClient({ initialTvs, initialGroups }: GroupsClientProps) {
+export function GroupsClient({ initialTvs, initialGroups, initialPlaylists }: GroupsClientProps) {
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
+  const playlistMap = new Map(initialPlaylists.map(p => [p.id, p.name]));
 
   return (
     <div className="space-y-8">
@@ -31,7 +33,12 @@ export function GroupsClient({ initialTvs, initialGroups }: GroupsClientProps) {
         {initialGroups.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {initialGroups.map(group => (
-              <GroupCard key={group.id} group={group} tvCount={initialTvs.filter(tv => tv.groupId === group.id).length} />
+              <GroupCard
+                key={group.id}
+                group={group}
+                tvCount={initialTvs.filter(tv => tv.groupId === group.id).length}
+                playlistName={group.playlistId ? playlistMap.get(group.playlistId) : undefined}
+              />
             ))}
           </div>
         ) : (

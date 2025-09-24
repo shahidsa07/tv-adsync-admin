@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tv, Trash2 } from 'lucide-react';
+import { Tv, Trash2, ListVideo } from 'lucide-react';
 import type { Group } from '@/lib/definitions';
 import { Button } from './ui/button';
 import {
@@ -24,9 +24,10 @@ import { Loader2 } from 'lucide-react';
 interface GroupCardProps {
   group: Group;
   tvCount: number;
+  playlistName?: string;
 }
 
-export function GroupCard({ group, tvCount }: GroupCardProps) {
+export function GroupCard({ group, tvCount, playlistName }: GroupCardProps) {
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
 
@@ -48,10 +49,14 @@ export function GroupCard({ group, tvCount }: GroupCardProps) {
                 <CardTitle className="font-headline tracking-tight">{group.name}</CardTitle>
                 <CardDescription>Click to manage group</CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow">
+            <CardContent className="flex-grow space-y-2">
                 <div className="flex items-center text-muted-foreground">
                     <Tv className="mr-2 h-4 w-4" />
                     <span>{tvCount} {tvCount === 1 ? 'TV' : 'TVs'} assigned</span>
+                </div>
+                <div className="flex items-center text-muted-foreground">
+                    <ListVideo className="mr-2 h-4 w-4" />
+                    <span className="truncate">Playlist: {playlistName || 'None'}</span>
                 </div>
             </CardContent>
         </Link>
