@@ -52,6 +52,17 @@ export const getTvsByGroupId = (groupId: string): TV[] => tvs.filter(tv => tv.gr
 
 // --- MUTATIONS ---
 
+export const createTv = (tvId: string): TV => {
+  const newTv: TV = {
+    tvId,
+    name: tvId, // Default name is the ID
+    groupId: null,
+    socketId: null,
+  };
+  tvs.push(newTv);
+  return newTv;
+};
+
 export const createGroup = (name: string): Group => {
   const newGroup: Group = {
     id: `group-${Date.now()}`,

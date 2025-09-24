@@ -7,6 +7,7 @@ import { TvCard } from './tv-card';
 import { CreateGroupDialog } from './create-group-dialog';
 import { Button } from './ui/button';
 import { PlusCircle } from 'lucide-react';
+import { AddTvDialog } from './add-tv-dialog';
 
 interface DashboardClientProps {
   initialTvs: TV[];
@@ -17,6 +18,7 @@ export function DashboardClient({ initialTvs, initialGroups }: DashboardClientPr
   const [tvs] = useState(initialTvs);
   const [groups] = useState(initialGroups);
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
+  const [showAddTvDialog, setShowAddTvDialog] = useState(false);
 
   const assignedTvs = tvs.filter(tv => tv.groupId);
   const unassignedTvs = tvs.filter(tv => !tv.groupId);
@@ -45,7 +47,13 @@ export function DashboardClient({ initialTvs, initialGroups }: DashboardClientPr
       </div>
 
       <div>
-        <h2 className="text-2xl font-headline font-semibold mb-4">Unassigned TVs</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-headline font-semibold">Unassigned TVs</h2>
+            <Button variant="outline" size="sm" onClick={() => setShowAddTvDialog(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add TV
+            </Button>
+        </div>
         {unassignedTvs.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {unassignedTvs.map(tv => (
@@ -60,6 +68,7 @@ export function DashboardClient({ initialTvs, initialGroups }: DashboardClientPr
       </div>
 
       <CreateGroupDialog open={showCreateGroupDialog} onOpenChange={setShowCreateGroupDialog} />
+      <AddTvDialog open={showAddTvDialog} onOpenChange={setShowAddTvDialog} />
     </div>
   );
 }
