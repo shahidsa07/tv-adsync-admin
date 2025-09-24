@@ -2,6 +2,10 @@
 import { db } from './firebase';
 
 export const seedInitialData = async () => {
+    if (!db) {
+        console.warn("Skipping seed: Firestore is not initialized.");
+        return;
+    }
     console.log('Checking for existing data...');
     const tvsSnapshot = await db.collection('tvs').limit(1).get();
     const groupsSnapshot = await db.collection('groups').limit(1).get();

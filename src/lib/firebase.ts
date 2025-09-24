@@ -1,29 +1,38 @@
-import { getApps, initializeApp, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
+'use server';
+
+import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { config } from 'dotenv';
 
 config();
 
-// This is a service account that can be used to authenticate with Firebase Admin.
-// It is safe to use in a server-only environment.
-// Do not expose this to the client.
+let app: App | undefined;
+let db: Firestore | undefined;
+
 const serviceAccount = {
-  projectId: 'studio-7399364451-b8cc3',
+  projectId: process.env.FIREBASE_PROJECT_ID || 'studio-7399364451-b8cc3',
   privateKey: (process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n'),
   clientEmail: process.env.FIREBASE_CLIENT_EMAIL || '',
 };
 
-function getFirebaseAdminApp() {
-  if (getApps().length > 0) {
-    return getApps()[0];
+if (serviceAccount.privateKey && serviceAccount.clientEmail) {
+  try {
+    if (getApps().length > 0) {
+      app = getApps()[0];
+    } else {
+      app = initializeApp({
+        credential: cert(serviceAccount),
+      });
+    }
+    db = getFirestore(app);
+  } catch (error: any) {
+    console.error('Firebase Admin initialization error:', error.message);
+    // Set db to undefined so the app can still run, although without db access
+    db = undefined; 
   }
-
-  return initializeApp({
-    credential: cert(serviceAccount),
-  });
+} else {
+  console.warn('Firebase credentials are not set. Database operations will not be available.');
 }
 
-const app = getFirebaseAdminApp();
-const db = getFirestore(app);
 
 export { app, db };

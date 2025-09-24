@@ -3,21 +3,29 @@ import { db } from '@/lib/firebase';
 import type { TV, Group, Ad, PriorityStream } from '@/lib/definitions';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, deleteDoc } from 'firebase/firestore';
 
+const ensureDb = () => {
+    if (!db) {
+        throw new Error("Firestore is not initialized. Please check your Firebase credentials.");
+    }
+    return db;
+}
+
+
 // --- GETTERS ---
 
 export const getTvs = async (): Promise<TV[]> => {
+  const db = ensureDb();
   const querySnapshot = await getDocs(collection(db, "tvs"));
   return querySnapshot.docs.map(doc => doc.data() as TV);
 };
 
 export const getGroups = async (): Promise<Group[]> => {
+    const db = ensureDb();
     const querySnapshot = await getDocs(collection(db, "groups"));
     return querySnapshot.docs.map(doc => doc.data() as Group);
 };
 
 export const getAds = async (): Promise<Ad[]> => {
-  // This could also be a collection in Firestore if ads need to be managed dynamically.
-  // For now, returning a static list as it was before, but it's not stored in Firestore.
   const { placeholderImages } = await import('./placeholder-images.json');
   return [
     { id: 'ad-1', type: 'image', url: placeholderImages[0]?.imageUrl || "https://picsum.photos/seed/ad1/1920/1080", order: 1, duration: 15 },
@@ -27,18 +35,21 @@ export const getAds = async (): Promise<Ad[]> => {
 };
 
 export const getTvById = async (tvId: string): Promise<TV | undefined> => {
+  const db = ensureDb();
   const docRef = doc(db, "tvs", tvId);
   const docSnap = await getDoc(docRef);
   return docSnap.exists() ? docSnap.data() as TV : undefined;
 };
 
 export const getGroupById = async (groupId: string): Promise<Group | undefined> => {
+  const db = ensureDb();
   const docRef = doc(db, "groups", groupId);
   const docSnap = await getDoc(docRef);
   return docSnap.exists() ? docSnap.data() as Group : undefined;
 };
 
 export const getTvsByGroupId = async (groupId: string): Promise<TV[]> => {
+  const db = ensureDb();
   const q = query(collection(db, "tvs"), where("groupId", "==", groupId));
   const querySnapshot = await getDocs(q);
   return querySnapshot.docs.map(doc => doc.data() as TV);
@@ -48,6 +59,7 @@ export const getTvsByGroupId = async (groupId: string): Promise<TV[]> => {
 // --- MUTATIONS ---
 
 export const createTv = async (tvId: string, name: string): Promise<TV> => {
+  const db = ensureDb();
   const newTv: TV = {
     tvId,
     name: name || tvId,
@@ -59,6 +71,7 @@ export const createTv = async (tvId: string, name: string): Promise<TV> => {
 };
 
 export const createGroup = async (name: string): Promise<Group> => {
+    const db = ensureDb();
     const id = `group-${Date.now()}`;
     const newGroup: Group = {
         id,
@@ -71,11 +84,13 @@ export const createGroup = async (name: string): Promise<Group> => {
 };
 
 export const deleteGroup = async (groupId: string): Promise<void> => {
+    const db = ensureDb();
     const docRef = doc(db, "groups", groupId);
     await deleteDoc(docRef);
 };
 
 export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'groupId'>>): Promise<TV | undefined> => {
+  const db = ensureDb();
   const docRef = doc(db, "tvs", tvId);
   await updateDoc(docRef, data);
   const docSnap = await getDoc(docRef);
@@ -83,20 +98,18 @@ export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'gr
 };
 
 export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<void> => {
+    const db = ensureDb();
     const batch = writeBatch(db);
     
-    // Get all TVs currently in the group
     const q = query(collection(db, "tvs"), where("groupId", "==", groupId));
     const querySnapshot = await getDocs(q);
 
-    // Unassign TVs that are no longer in the group
     querySnapshot.forEach(docSnap => {
         if (!tvIds.includes(docSnap.id)) {
             batch.update(docSnap.ref, { groupId: null });
         }
     });
 
-    // Assign new TVs to the group
     for (const tvId of tvIds) {
         const tvRef = doc(db, "tvs", tvId);
         batch.update(tvRef, { groupId });
@@ -106,6 +119,7 @@ export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<
 };
 
 export const updateGroupAds = async (groupId: string, newAds: Ad[]): Promise<Group | undefined> => {
+    const db = ensureDb();
     const groupRef = doc(db, "groups", groupId);
     const adsWithOrder = newAds.map((ad, index) => ({...ad, id: ad.id.startsWith('new-') ? `ad-${Date.now()}-${index}`: ad.id, order: index + 1}));
     await updateDoc(groupRef, { ads: adsWithOrder });
@@ -114,6 +128,7 @@ export const updateGroupAds = async (groupId: string, newAds: Ad[]): Promise<Gro
 };
 
 export const updatePriorityStream = async (groupId: string, stream: PriorityStream | null): Promise<Group | undefined> => {
+  const db = ensureDb();
   const groupRef = doc(db, "groups", groupId);
   await updateDoc(groupRef, { priorityStream: stream });
   const docSnap = await getDoc(groupRef);
@@ -121,6 +136,7 @@ export const updatePriorityStream = async (groupId: string, stream: PriorityStre
 };
 
 export const setTvOnlineStatus = async (tvId: string, isOnline: boolean): Promise<TV | undefined> => {
+    const db = ensureDb();
     const docRef = doc(db, "tvs", tvId);
     const socketId = isOnline ? `socket-${Date.now()}` : null;
     await updateDoc(docRef, { socketId });
