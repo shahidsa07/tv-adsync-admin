@@ -4,6 +4,8 @@ import type { TV, Group } from "@/lib/definitions";
 import { useState, useMemo } from "react";
 import { TvCard } from "./tv-card";
 import { Button } from "./ui/button";
+import { PlusCircle } from "lucide-react";
+import { AddTvDialog } from "./add-tv-dialog";
 
 interface TvsClientProps {
   initialTvs: TV[];
@@ -14,6 +16,7 @@ type FilterType = "all" | "assigned" | "unassigned";
 
 export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
   const [filter, setFilter] = useState<FilterType>("all");
+  const [showAddTvDialog, setShowAddTvDialog] = useState(false);
 
   const filteredTvs = useMemo(() => {
     if (filter === "assigned") {
@@ -34,31 +37,37 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
             A complete list of all registered TVs in your system.
           </p>
         </div>
-        <div className="flex items-center gap-2 rounded-lg bg-muted p-1">
-          <Button
-            variant={filter === "all" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setFilter("all")}
-            className="flex-1 justify-center"
-          >
-            All
-          </Button>
-          <Button
-            variant={filter === "assigned" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setFilter("assigned")}
-            className="flex-1 justify-center"
-          >
-            Assigned
-          </Button>
-          <Button
-            variant={filter === "unassigned" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => setFilter("unassigned")}
-            className="flex-1 justify-center"
-          >
-            Unassigned
-          </Button>
+        <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 rounded-lg bg-muted p-1">
+                <Button
+                    variant={filter === "all" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setFilter("all")}
+                    className="flex-1 justify-center"
+                >
+                    All
+                </Button>
+                <Button
+                    variant={filter === "assigned" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setFilter("assigned")}
+                    className="flex-1 justify-center"
+                >
+                    Assigned
+                </Button>
+                <Button
+                    variant={filter === "unassigned" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setFilter("unassigned")}
+                    className="flex-1 justify-center"
+                >
+                    Unassigned
+                </Button>
+            </div>
+             <Button variant="outline" onClick={() => setShowAddTvDialog(true)}>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add TV
+            </Button>
         </div>
       </div>
 
@@ -75,6 +84,7 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
           </p>
         </div>
       )}
+      <AddTvDialog open={showAddTvDialog} onOpenChange={setShowAddTvDialog} />
     </div>
   );
 }
