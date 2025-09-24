@@ -3,26 +3,15 @@ import { db } from '@/lib/firebase';
 import type { TV, Group, Ad, PriorityStream } from '@/lib/definitions';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, deleteDoc } from 'firebase/firestore';
 
-const ensureDb = () => {
-    if (!db) {
-        console.warn("Firestore is not initialized. Please check your Firebase credentials.");
-        return undefined;
-    }
-    return db;
-}
-
-
 // --- GETTERS ---
 
 export const getTvs = async (): Promise<TV[]> => {
-  const db = ensureDb();
   if (!db) return [];
   const querySnapshot = await getDocs(collection(db, "tvs"));
   return querySnapshot.docs.map(doc => doc.data() as TV);
 };
 
 export const getGroups = async (): Promise<Group[]> => {
-    const db = ensureDb();
     if (!db) return [];
     const querySnapshot = await getDocs(collection(db, "groups"));
     return querySnapshot.docs.map(doc => doc.data() as Group);
@@ -38,7 +27,6 @@ export const getAds = async (): Promise<Ad[]> => {
 };
 
 export const getTvById = async (tvId: string): Promise<TV | undefined> => {
-  const db = ensureDb();
   if (!db) return undefined;
   const docRef = doc(db, "tvs", tvId);
   const docSnap = await getDoc(docRef);
@@ -46,7 +34,6 @@ export const getTvById = async (tvId: string): Promise<TV | undefined> => {
 };
 
 export const getGroupById = async (groupId: string): Promise<Group | undefined> => {
-  const db = ensureDb();
   if (!db) return undefined;
   const docRef = doc(db, "groups", groupId);
   const docSnap = await getDoc(docRef);
@@ -54,7 +41,6 @@ export const getGroupById = async (groupId: string): Promise<Group | undefined> 
 };
 
 export const getTvsByGroupId = async (groupId: string): Promise<TV[]> => {
-  const db = ensureDb();
   if (!db) return [];
   const q = query(collection(db, "tvs"), where("groupId", "==", groupId));
   const querySnapshot = await getDocs(q);
@@ -65,7 +51,6 @@ export const getTvsByGroupId = async (groupId: string): Promise<TV[]> => {
 // --- MUTATIONS ---
 
 export const createTv = async (tvId: string, name: string): Promise<TV | undefined> => {
-  const db = ensureDb();
   if (!db) return undefined;
   const newTv: TV = {
     tvId,
@@ -78,7 +63,6 @@ export const createTv = async (tvId: string, name: string): Promise<TV | undefin
 };
 
 export const createGroup = async (name: string): Promise<Group | undefined> => {
-    const db = ensureDb();
     if (!db) return undefined;
     const id = `group-${Date.now()}`;
     const newGroup: Group = {
@@ -92,7 +76,6 @@ export const createGroup = async (name: string): Promise<Group | undefined> => {
 };
 
 export const deleteGroup = async (groupId: string): Promise<boolean> => {
-    const db = ensureDb();
     if (!db) return false;
     const docRef = doc(db, "groups", groupId);
     await deleteDoc(docRef);
@@ -100,7 +83,6 @@ export const deleteGroup = async (groupId: string): Promise<boolean> => {
 };
 
 export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'groupId'>>): Promise<TV | undefined> => {
-  const db = ensureDb();
   if (!db) return undefined;
   const docRef = doc(db, "tvs", tvId);
   await updateDoc(docRef, data);
@@ -109,7 +91,6 @@ export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'gr
 };
 
 export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<boolean> => {
-    const db = ensureDb();
     if (!db) return false;
     const batch = writeBatch(db);
     
@@ -132,7 +113,6 @@ export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<
 };
 
 export const updateGroupAds = async (groupId: string, newAds: Ad[]): Promise<Group | undefined> => {
-    const db = ensureDb();
     if (!db) return undefined;
     const groupRef = doc(db, "groups", groupId);
     const adsWithOrder = newAds.map((ad, index) => ({...ad, id: ad.id.startsWith('new-') ? `ad-${Date.now()}-${index}`: ad.id, order: index + 1}));
@@ -142,7 +122,6 @@ export const updateGroupAds = async (groupId: string, newAds: Ad[]): Promise<Gro
 };
 
 export const updatePriorityStream = async (groupId: string, stream: PriorityStream | null): Promise<Group | undefined> => {
-  const db = ensureDb();
   if (!db) return undefined;
   const groupRef = doc(db, "groups", groupId);
   await updateDoc(groupRef, { priorityStream: stream });
@@ -151,7 +130,6 @@ export const updatePriorityStream = async (groupId: string, stream: PriorityStre
 };
 
 export const setTvOnlineStatus = async (tvId: string, isOnline: boolean): Promise<TV | undefined> => {
-    const db = ensureDb();
     if (!db) return undefined;
     const docRef = doc(db, "tvs", tvId);
     const socketId = isOnline ? `socket-${Date.now()}` : null;

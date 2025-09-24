@@ -22,6 +22,8 @@ export async function createGroupAction(name: string) {
 export async function deleteGroupAction(groupId: string) {
     try {
         const tvsInGroup = await data.getTvsByGroupId(groupId);
+        if (!tvsInGroup) return { success: false, message: DB_UNAVAILABLE_ERROR };
+
         if (tvsInGroup.length > 0) {
             return { success: false, message: "Cannot delete a group that has TVs assigned to it." };
         }
@@ -37,9 +39,13 @@ export async function deleteGroupAction(groupId: string) {
 export async function registerTvAction(tvId: string, name: string) {
     try {
         const existingTv = await data.getTvById(tvId);
-        if (existingTv) {
+        // We can't know if a TV exists if DB is not available, so we check for undefined
+        if (existingTv === undefined && await data.getTvs() !== undefined) {
+             // Continue if TV doesn't exist, or if we can't get TV list
+        } else if (existingTv) {
             return { success: false, message: 'A TV with this ID is already registered.' };
         }
+
         const result = await data.createTv(tvId, name);
         if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
         revalidatePath('/');
@@ -79,7 +85,9 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
     }
     // Revalidate all group pages since TV might have moved from another group
     const groups = await data.getGroups();
-    groups.forEach(g => revalidatePath(`/groups/${g.id}`));
+    if (groups) {
+        groups.forEach(g => revalidatePath(`/groups/${g.id}`));
+    }
 
     return { success: true, message: `TV assigned successfully.` }
   } catch (error) {
