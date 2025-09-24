@@ -1,4 +1,4 @@
-"use server"
+'use server';
 
 import { revalidatePath } from 'next/cache'
 import * as data from './data'
@@ -102,5 +102,16 @@ export async function getAiGroupSuggestion(tvName: string, existingGroupNames: s
     } catch (error) {
         console.error("AI suggestion failed:", error);
         return { success: false, message: 'AI suggestion service is unavailable.' };
+    }
+}
+
+export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
+    try {
+        data.setTvOnlineStatus(tvId, isOnline);
+        revalidatePath('/');
+        revalidatePath('/groups');
+        return { success: true, message: `TV status updated.` };
+    } catch (error) {
+        return { success: false, message: 'Failed to update TV status.' };
     }
 }

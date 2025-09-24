@@ -4,12 +4,12 @@ import type { TV, Group } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Monitor, ArrowRight, Pencil, Check, X } from 'lucide-react';
+import { Monitor, ArrowRight, Pencil, Check, X, Wifi, WifiOff } from 'lucide-react';
 import { AssignGroupDialog } from './assign-group-dialog';
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { updateTvNameAction } from '@/lib/actions';
+import { updateTvNameAction, setTvOnlineAction } from '@/lib/actions';
 
 interface TvCardProps {
   tv: TV;
@@ -20,6 +20,7 @@ export function TvCard({ tv, groups }: TvCardProps) {
   const [isAssigning, setIsAssigning] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(tv.name);
+  const [isStatusPending, startStatusTransition] = useTransition();
   const { toast } = useToast();
 
   const isOnline = !!tv.socketId;
@@ -39,6 +40,17 @@ export function TvCard({ tv, groups }: TvCardProps) {
       setNewName(tv.name);
     }
     setIsEditingName(false);
+  }
+  
+  const handleToggleOnlineStatus = () => {
+    startStatusTransition(async () => {
+        const result = await setTvOnlineAction(tv.tvId, !isOnline);
+         if (result.success) {
+            toast({ title: 'Success', description: `TV is now ${!isOnline ? 'Online' : 'Offline'}.` });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.message });
+        }
+    });
   }
 
   return (
@@ -72,11 +84,24 @@ export function TvCard({ tv, groups }: TvCardProps) {
             <span>Group: {group?.name || 'Unassigned'}</span>
           </div>
         </CardContent>
-        <CardFooter>
-          {isOnline && !group && (
-            <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
-              Assign Group
-              <ArrowRight className="ml-2 h-4 w-4" />
+        <CardFooter className='gap-2'>
+          {isOnline ? (
+            <>
+                {!group && (
+                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
+                    Assign Group
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                )}
+                <Button variant="outline" className="w-full" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
+                    <WifiOff className="mr-2 h-4 w-4"/>
+                    Simulate Disconnect
+                </Button>
+            </>
+          ) : (
+             <Button variant="outline" className="w-full" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
+                <Wifi className="mr-2 h-4 w-4"/>
+                Simulate Connect
             </Button>
           )}
         </CardFooter>

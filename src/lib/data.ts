@@ -105,3 +105,10 @@ export const updatePriorityStream = (groupId: string, stream: Group['priorityStr
   groups[groupIndex].priorityStream = stream;
   return groups[groupIndex];
 };
+
+export const setTvOnlineStatus = (tvId: string, isOnline: boolean): TV | undefined => {
+    const tvIndex = tvs.findIndex(tv => tv.tvId === tvId);
+    if (tvIndex === -1) return undefined;
+    tvs[tvIndex].socketId = isOnline ? `socket-${Date.now()}` : null;
+    return tvs[tvIndex];
+};
