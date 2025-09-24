@@ -1,7 +1,7 @@
 "use client";
 
 import type { Group, TV } from "@/lib/definitions";
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useMemo } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Checkbox } from "./ui/checkbox";
@@ -9,8 +9,9 @@ import { Label } from "./ui/label";
 import { ScrollArea } from "./ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { updateGroupTvsAction } from "@/lib/actions";
-import { Loader2 } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import { Badge } from "./ui/badge";
+import { Input } from "./ui/input";
 
 interface ManageGroupTvsDialogProps {
   open: boolean;
@@ -23,11 +24,13 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
   const [selectedTvIds, setSelectedTvIds] = useState<string[]>([]);
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (open) {
       const currentTvIds = allTvs.filter(tv => tv.groupId === group.id).map(tv => tv.tvId);
       setSelectedTvIds(currentTvIds);
+      setSearchTerm("");
     }
   }, [open, group.id, allTvs]);
 
@@ -49,7 +52,11 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
     });
   };
 
-  const availableTvs = allTvs.filter(tv => tv.groupId === null || tv.groupId === group.id);
+  const filteredTvs = useMemo(() => {
+    return allTvs
+      .filter(tv => tv.groupId === null || tv.groupId === group.id)
+      .filter(tv => tv.name.toLowerCase().includes(searchTerm.toLowerCase()));
+  }, [allTvs, group.id, searchTerm]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -60,9 +67,20 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
             Select which TVs should be part of this group. Only TVs not in another group are shown.
           </DialogDescription>
         </DialogHeader>
+        
+        <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+                placeholder="Search for a TV..."
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                className="pl-9"
+            />
+        </div>
+        
         <ScrollArea className="h-72">
           <div className="space-y-4 p-4">
-            {availableTvs.length > 0 ? availableTvs.map(tv => (
+            {filteredTvs.length > 0 ? filteredTvs.map(tv => (
                     <div key={tv.tvId} className="flex items-center justify-between rounded-lg border p-3">
                         <div className="flex items-center gap-3">
                             <Checkbox
@@ -79,7 +97,7 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
                         </Badge>
                     </div>
             )) : (
-              <p className="text-center text-muted-foreground">No available TVs to assign.</p>
+              <p className="text-center text-muted-foreground pt-4">No TVs found matching your search.</p>
             )}
           </div>
         </ScrollArea>
