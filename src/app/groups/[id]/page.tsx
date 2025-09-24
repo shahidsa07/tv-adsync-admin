@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 export default async function GroupDetailsPage({ params }: { params: { id: string } }) {
-  const group = getGroupById(params.id);
-  const allTvs = getTvs();
+  const group = await getGroupById(params.id);
+  const allTvs = await getTvs();
 
   if (!group) {
     notFound();

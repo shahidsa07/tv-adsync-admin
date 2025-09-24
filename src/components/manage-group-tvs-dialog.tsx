@@ -49,6 +49,8 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
     });
   };
 
+  const availableTvs = allTvs.filter(tv => tv.groupId === null || tv.groupId === group.id);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -60,9 +62,7 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
         </DialogHeader>
         <ScrollArea className="h-72">
           <div className="space-y-4 p-4">
-            {allTvs
-                .filter(tv => tv.groupId === null || tv.groupId === group.id)
-                .map(tv => (
+            {availableTvs.length > 0 ? availableTvs.map(tv => (
                     <div key={tv.tvId} className="flex items-center justify-between rounded-lg border p-3">
                         <div className="flex items-center gap-3">
                             <Checkbox
@@ -78,7 +78,9 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
                           {tv.socketId ? 'Online' : 'Offline'}
                         </Badge>
                     </div>
-            ))}
+            )) : (
+              <p className="text-center text-muted-foreground">No available TVs to assign.</p>
+            )}
           </div>
         </ScrollArea>
         <DialogFooter>

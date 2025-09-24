@@ -7,7 +7,7 @@ import type { Ad, PriorityStream } from './definitions'
 
 export async function createGroupAction(name: string) {
   try {
-    data.createGroup(name);
+    await data.createGroup(name);
     revalidatePath('/')
     return { success: true, message: `Group "${name}" created.` }
   } catch (error) {
@@ -17,11 +17,11 @@ export async function createGroupAction(name: string) {
 
 export async function registerTvAction(tvId: string, name: string) {
     try {
-        const existingTv = data.getTvById(tvId);
+        const existingTv = await data.getTvById(tvId);
         if (existingTv) {
             return { success: false, message: 'A TV with this ID is already registered.' };
         }
-        data.createTv(tvId, name);
+        await data.createTv(tvId, name);
         revalidatePath('/');
         return { success: true, message: `TV "${name}" registered successfully.` };
     } catch (error) {
@@ -31,7 +31,7 @@ export async function registerTvAction(tvId: string, name: string) {
 
 export async function updateTvNameAction(tvId: string, name: string) {
   try {
-    data.updateTv(tvId, { name });
+    await data.updateTv(tvId, { name });
     revalidatePath('/')
     revalidatePath(`/groups/`) // Also revalidate any group pages
     return { success: true, message: `TV name updated to "${name}".` }
@@ -42,7 +42,7 @@ export async function updateTvNameAction(tvId: string, name: string) {
 
 export async function assignTvToGroupAction(tvId: string, groupId: string | null) {
   try {
-    data.updateTv(tvId, { groupId });
+    await data.updateTv(tvId, { groupId });
     revalidatePath('/');
     revalidatePath(`/groups/${groupId}`);
     return { success: true, message: `TV assigned successfully.` }
@@ -53,7 +53,7 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
 
 export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
     try {
-        data.updateGroupTvs(groupId, tvIds);
+        await data.updateGroupTvs(groupId, tvIds);
         revalidatePath('/');
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Group TVs updated.' };
@@ -64,7 +64,7 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
 
 export async function updateGroupAdsAction(groupId: string, ads: Ad[]) {
     try {
-        data.updateGroupAds(groupId, ads);
+        await data.updateGroupAds(groupId, ads);
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Ad playlist updated.' };
     } catch (error) {
@@ -74,7 +74,7 @@ export async function updateGroupAdsAction(groupId: string, ads: Ad[]) {
 
 export async function startPriorityStreamAction(groupId: string, stream: PriorityStream) {
     try {
-        data.updatePriorityStream(groupId, stream);
+        await data.updatePriorityStream(groupId, stream);
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Priority stream started.' };
     } catch (error) {
@@ -84,7 +84,7 @@ export async function startPriorityStreamAction(groupId: string, stream: Priorit
 
 export async function stopPriorityStreamAction(groupId: string) {
     try {
-        data.updatePriorityStream(groupId, null);
+        await data.updatePriorityStream(groupId, null);
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Priority stream stopped.' };
     } catch (error) {
@@ -107,7 +107,7 @@ export async function getAiGroupSuggestion(tvName: string, existingGroupNames: s
 
 export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
     try {
-        data.setTvOnlineStatus(tvId, isOnline);
+        await data.setTvOnlineStatus(tvId, isOnline);
         revalidatePath('/');
         revalidatePath('/groups');
         return { success: true, message: `TV status updated.` };

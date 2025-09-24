@@ -1,10 +1,11 @@
-import { getTvs, getGroups } from '@/lib/data';
+import { getTvs, getGroups, seedInitialData } from '@/lib/data';
 import { DashboardClient } from '@/components/dashboard-client';
 import { Header } from '@/components/header';
 
 export default async function Home() {
-  const tvs = getTvs();
-  const groups = getGroups();
+  await seedInitialData();
+  const tvs = await getTvs();
+  const groups = await getGroups();
 
   return (
     <div className="flex min-h-screen w-full flex-col">
