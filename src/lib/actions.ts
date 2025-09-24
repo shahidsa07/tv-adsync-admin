@@ -54,6 +54,10 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
     if (groupId) {
       revalidatePath(`/groups/${groupId}`);
     }
+    // Revalidate all group pages since TV might have moved from another group
+    const groups = await data.getGroups();
+    groups.forEach(g => revalidatePath(`/groups/${g.id}`));
+
     return { success: true, message: `TV assigned successfully.` }
   } catch (error) {
     return { success: false, message: "Failed to assign TV." }
@@ -121,7 +125,13 @@ export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/tvs');
-        revalidatePath('/groups');
+        
+        // Find the TV to revalidate its group page if it has one
+        const tv = await data.getTvById(tvId);
+        if (tv?.groupId) {
+            revalidatePath(`/groups/${tv.groupId}`);
+        }
+        
         return { success: true, message: `TV status updated.` };
     } catch (error) {
         return { success: false, message: 'Failed to update TV status.' };

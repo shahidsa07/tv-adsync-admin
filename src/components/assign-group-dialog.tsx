@@ -1,7 +1,7 @@
 "use client";
 
 import type { TV, Group } from '@/lib/definitions';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState, useTransition, useCallback } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from './ui/button';
@@ -20,40 +20,42 @@ interface AssignGroupDialogProps {
 export function AssignGroupDialog({ open, onOpenChange, tv, groups }: AssignGroupDialogProps) {
   const [suggestion, setSuggestion] = useState<{ groupName: string; confidence: number } | null>(null);
   const [selectedGroup, setSelectedGroup] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isPending, startTransition] = useTransition();
+  const [isSuggestionLoading, startSuggestionTransition] = useTransition();
+  const [isAssignPending, startAssignTransition] = useTransition();
+
   const { toast } = useToast();
+
+  const fetchSuggestion = useCallback(() => {
+    startSuggestionTransition(async () => {
+      const groupNames = groups.map(g => g.name);
+      const result = await getAiGroupSuggestion(tv.name, groupNames);
+      if (result.success && result.data) {
+        setSuggestion({ groupName: result.data.suggestedGroupName, confidence: result.data.confidence });
+        const suggestedGroup = groups.find(g => g.name === result.data.suggestedGroupName);
+        if (suggestedGroup) {
+          setSelectedGroup(suggestedGroup.id);
+        }
+      } else {
+        toast({ variant: 'destructive', title: 'AI Suggestion Error', description: result.message });
+      }
+    });
+  }, [groups, tv.name, toast]);
 
   useEffect(() => {
     if (open) {
-      const fetchSuggestion = async () => {
-        setIsLoading(true);
-        const groupNames = groups.map(g => g.name);
-        const result = await getAiGroupSuggestion(tv.name, groupNames);
-        if (result.success && result.data) {
-          setSuggestion({ groupName: result.data.suggestedGroupName, confidence: result.data.confidence });
-          const suggestedGroup = groups.find(g => g.name === result.data.suggestedGroupName);
-          if (suggestedGroup) {
-            setSelectedGroup(suggestedGroup.id);
-          }
-        } else {
-            toast({ variant: 'destructive', title: 'AI Suggestion Error', description: result.message });
-        }
-        setIsLoading(false);
-      };
       fetchSuggestion();
     } else {
-        setSuggestion(null);
-        setSelectedGroup('');
+      setSuggestion(null);
+      setSelectedGroup('');
     }
-  }, [open, tv.name, groups, toast]);
+  }, [open, fetchSuggestion]);
 
   const handleSubmit = () => {
     if (!selectedGroup) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please select a group.' });
       return;
     }
-    startTransition(async () => {
+    startAssignTransition(async () => {
       const result = await assignTvToGroupAction(tv.tvId, selectedGroup);
       if (result.success) {
         toast({ title: 'Success', description: result.message });
@@ -79,7 +81,7 @@ export function AssignGroupDialog({ open, onOpenChange, tv, groups }: AssignGrou
                     <Wand2 className="h-5 w-5 text-accent"/>
                     <span>AI Suggestion</span>
                 </div>
-                {isLoading ? (
+                {isSuggestionLoading ? (
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-4 w-4 animate-spin" />
                         <span>Generating suggestion...</span>
@@ -112,8 +114,8 @@ export function AssignGroupDialog({ open, onOpenChange, tv, groups }: AssignGrou
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} disabled={isPending || !selectedGroup}>
-            {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button onClick={handleSubmit} disabled={isAssignPending || !selectedGroup}>
+            {isAssignPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Assign to Group
           </Button>
         </DialogFooter>

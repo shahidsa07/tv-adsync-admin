@@ -6,7 +6,10 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function DashboardPage() {
+  // Attempt to seed data, but don't block rendering if it fails
+  // This is often the case on first load if permissions aren't set up yet
   await seedInitialData();
+  
   const tvs = await getTvs();
   const groups = await getGroups();
 

@@ -102,7 +102,7 @@ export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<
 
 export const updateGroupAds = async (groupId: string, newAds: Ad[]): Promise<Group | undefined> => {
     const groupRef = doc(db, "groups", groupId);
-    const adsWithOrder = newAds.map((ad, index) => ({...ad, order: index + 1}));
+    const adsWithOrder = newAds.map((ad, index) => ({...ad, id: ad.id.startsWith('new-') ? `ad-${Date.now()}-${index}`: ad.id, order: index + 1}));
     await updateDoc(groupRef, { ads: adsWithOrder });
     const docSnap = await getDoc(groupRef);
     return docSnap.data() as Group;
@@ -125,44 +125,50 @@ export const setTvOnlineStatus = async (tvId: string, isOnline: boolean): Promis
 
 // Seed initial data if collections are empty
 export const seedInitialData = async () => {
-    const tvsSnapshot = await getDocs(collection(db, 'tvs'));
-    if (tvsSnapshot.empty) {
-        console.log('Seeding initial TVs...');
-        const initialTvs: TV[] = [
-            { tvId: 'tv-lobby-main-001', name: 'Lobby TV Main', groupId: 'group-3', socketId: 'socket-1' },
-            { tvId: 'tv-lobby-side-002', name: 'Lobby TV Side', groupId: null, socketId: 'socket-2' },
-            { tvId: 'tv-corridor-1f-003', name: 'Corridor Display 1F', groupId: 'group-2', socketId: 'socket-3' },
-            { tvId: 'tv-office-entrance-004', name: 'Office Entrance', groupId: 'group-1', socketId: null },
-            { tvId: 'tv-reception-desk-005', name: 'Reception Desk', groupId: 'group-1', socketId: 'socket-5' },
-            { tvId: 'tv-meeting-room-006', name: 'Meeting Room Schedule', groupId: null, socketId: null },
-        ];
-        const batch = writeBatch(db);
-        initialTvs.forEach(tv => {
-            const tvRef = doc(db, 'tvs', tv.tvId);
-            batch.set(tvRef, tv);
-        });
-        await batch.commit();
-    }
+    try {
+      const tvsSnapshot = await getDocs(collection(db, 'tvs'));
+      if (tvsSnapshot.empty) {
+          console.log('Seeding initial TVs...');
+          const initialTvs: TV[] = [
+              { tvId: 'tv-lobby-main-001', name: 'Lobby TV Main', groupId: 'group-3', socketId: 'socket-1' },
+              { tvId: 'tv-lobby-side-002', name: 'Lobby TV Side', groupId: null, socketId: 'socket-2' },
+              { tvId: 'tv-corridor-1f-003', name: 'Corridor Display 1F', groupId: 'group-2', socketId: 'socket-3' },
+              { tvId: 'tv-office-entrance-004', name: 'Office Entrance', groupId: 'group-1', socketId: null },
+              { tvId: 'tv-reception-desk-005', name: 'Reception Desk', groupId: 'group-1', socketId: 'socket-5' },
+              { tvId: 'tv-meeting-room-006', name: 'Meeting Room Schedule', groupId: null, socketId: null },
+          ];
+          const batch = writeBatch(db);
+          initialTvs.forEach(tv => {
+              const tvRef = doc(db, 'tvs', tv.tvId);
+              batch.set(tvRef, tv);
+          });
+          await batch.commit();
+      }
 
-    const groupsSnapshot = await getDocs(collection(db, 'groups'));
-    if (groupsSnapshot.empty) {
-        console.log('Seeding initial Groups...');
-        const { placeholderImages } = await import('./placeholder-images.json');
-        const ads: Ad[] = [
-          { id: 'ad-1', type: 'image', url: placeholderImages[0]?.imageUrl || "https://picsum.photos/seed/ad1/1920/1080", order: 1, duration: 15 },
-          { id: 'ad-2', type: 'video', url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4', order: 2 },
-          { id: 'ad-3', type: 'image', url: placeholderImages[1]?.imageUrl || "https://picsum.photos/seed/ad2/1920/1080", order: 3, duration: 10 },
-        ];
-        const initialGroups: Group[] = [
-            { id: 'group-1', name: 'Ground Floor TVs', ads: [ads[0]], priorityStream: null },
-            { id: 'group-2', name: 'First Floor', ads: [ads[1], ads[2]], priorityStream: null },
-            { id: 'group-3', name: 'Lobby Screens', ads: [], priorityStream: { type: 'youtube', url: 'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1' } },
-        ];
-        const batch = writeBatch(db);
-        initialGroups.forEach(group => {
-            const groupRef = doc(db, 'groups', group.id);
-            batch.set(groupRef, group);
-        });
-        await batch.commit();
+      const groupsSnapshot = await getDocs(collection(db, 'groups'));
+      if (groupsSnapshot.empty) {
+          console.log('Seeding initial Groups...');
+          const { placeholderImages } = await import('./placeholder-images.json');
+          const ads: Ad[] = [
+            { id: 'ad-1', type: 'image', url: placeholderImages[0]?.imageUrl || "https://picsum.photos/seed/ad1/1920/1080", order: 1, duration: 15 },
+            { id: 'ad-2', type: 'video', url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4', order: 2 },
+            { id: 'ad-3', type: 'image', url: placeholderImages[1]?.imageUrl || "https://picsum.photos/seed/ad2/1920/1080", order: 3, duration: 10 },
+          ];
+          const initialGroups: Group[] = [
+              { id: 'group-1', name: 'Ground Floor TVs', ads: [ads[0]], priorityStream: null },
+              { id: 'group-2', name: 'First Floor', ads: [ads[1], ads[2]], priorityStream: null },
+              { id: 'group-3', name: 'Lobby Screens', ads: [], priorityStream: { type: 'youtube', url: 'https://www.youtube.com/embed/jfKfPfyJRdk?autoplay=1' } },
+          ];
+          const batch = writeBatch(db);
+          initialGroups.forEach(group => {
+              const groupRef = doc(db, 'groups', group.id);
+              batch.set(groupRef, group);
+          });
+          await batch.commit();
+      }
+    } catch (e) {
+      console.error('Error seeding data:', e);
+      // Don't re-throw the error, as it might be due to permissions during initial setup
+      // and the app can still function.
     }
 };
