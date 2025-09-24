@@ -52,10 +52,10 @@ export const getTvsByGroupId = (groupId: string): TV[] => tvs.filter(tv => tv.gr
 
 // --- MUTATIONS ---
 
-export const createTv = (tvId: string): TV => {
+export const createTv = (tvId: string, name: string): TV => {
   const newTv: TV = {
     tvId,
-    name: tvId, // Default name is the ID
+    name: name || tvId, // Default name is the ID if not provided
     groupId: null,
     socketId: null,
   };

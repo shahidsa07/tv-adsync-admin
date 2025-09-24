@@ -15,15 +15,15 @@ export async function createGroupAction(name: string) {
   }
 }
 
-export async function registerTvAction(tvId: string) {
+export async function registerTvAction(tvId: string, name: string) {
     try {
         const existingTv = data.getTvById(tvId);
         if (existingTv) {
             return { success: false, message: 'A TV with this ID is already registered.' };
         }
-        data.createTv(tvId);
+        data.createTv(tvId, name);
         revalidatePath('/');
-        return { success: true, message: `TV "${tvId}" registered successfully.` };
+        return { success: true, message: `TV "${name}" registered successfully.` };
     } catch (error) {
         return { success: false, message: 'Failed to register TV.' };
     }
