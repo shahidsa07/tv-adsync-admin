@@ -13,8 +13,6 @@ interface GroupsClientProps {
 }
 
 export function GroupsClient({ initialTvs, initialGroups }: GroupsClientProps) {
-  const [tvs] = useState(initialTvs);
-  const [groups] = useState(initialGroups);
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
 
   return (
@@ -30,10 +28,10 @@ export function GroupsClient({ initialTvs, initialGroups }: GroupsClientProps) {
             Create Group
           </Button>
         </div>
-        {groups.length > 0 ? (
+        {initialGroups.length > 0 ? (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-            {groups.map(group => (
-              <GroupCard key={group.id} group={group} tvCount={tvs.filter(tv => tv.groupId === group.id).length} />
+            {initialGroups.map(group => (
+              <GroupCard key={group.id} group={group} tvCount={initialTvs.filter(tv => tv.groupId === group.id).length} />
             ))}
           </div>
         ) : (

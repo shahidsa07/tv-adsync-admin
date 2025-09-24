@@ -1,3 +1,5 @@
+"use client";
+
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tv, Trash2 } from 'lucide-react';
@@ -18,7 +20,6 @@ import { useTransition } from 'react';
 import { deleteGroupAction } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 interface GroupCardProps {
   group: Group;
@@ -28,14 +29,12 @@ interface GroupCardProps {
 export function GroupCard({ group, tvCount }: GroupCardProps) {
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
-    const router = useRouter();
 
     const handleDelete = () => {
         startTransition(async () => {
             const result = await deleteGroupAction(group.id);
             if (result.success) {
                 toast({ title: "Success", description: result.message });
-                router.refresh();
             } else {
                 toast({ variant: "destructive", title: "Error", description: result.message });
             }
