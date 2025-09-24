@@ -7,9 +7,9 @@ export const dynamic = 'force-dynamic'; // Ensure fresh data on every request
 
 export async function GET(
   request: Request,
-  { params }: { params: { tvId: string } }
+  context: { params: Promise<{ tvId: string }> }
 ) {
-  const { tvId } = params;
+  const { tvId } = await context.params;
 
   if (!tvId) {
     return NextResponse.json({ error: 'TV ID is required' }, { status: 400 });
