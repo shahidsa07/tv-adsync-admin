@@ -6,6 +6,7 @@ import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query,
 // --- GETTERS ---
 
 export const getTvs = async (): Promise<TV[]> => {
+  await seedInitialData(); // Seed data if necessary, only runs on the server.
   const querySnapshot = await getDocs(collection(db, "tvs"));
   return querySnapshot.docs.map(doc => doc.data() as TV);
 };
