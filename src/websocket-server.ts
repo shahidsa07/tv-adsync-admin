@@ -1,3 +1,7 @@
+
+import { config } from 'dotenv';
+config(); // Load environment variables from .env file
+
 import { WebSocketServer, WebSocket } from 'ws';
 import { setTvOnlineStatus, getTvsByGroupId } from './lib/data';
 import chokidar from 'chokidar';
