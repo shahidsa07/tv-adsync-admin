@@ -36,7 +36,7 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
         </div>
         <div className="flex items-center gap-2 rounded-lg bg-muted p-1">
           <Button
-            variant={filter === "all" ? "secondary" : "ghost"}
+            variant={filter === "all" ? "default" : "ghost"}
             size="sm"
             onClick={() => setFilter("all")}
             className="flex-1 justify-center"
@@ -44,7 +44,7 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
             All
           </Button>
           <Button
-            variant={filter === "assigned" ? "secondary" : "ghost"}
+            variant={filter === "assigned" ? "default" : "ghost"}
             size="sm"
             onClick={() => setFilter("assigned")}
             className="flex-1 justify-center"
@@ -52,7 +52,7 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
             Assigned
           </Button>
           <Button
-            variant={filter === "unassigned" ? "secondary" : "ghost"}
+            variant={filter === "unassigned" ? "default" : "ghost"}
             size="sm"
             onClick={() => setFilter("unassigned")}
             className="flex-1 justify-center"
