@@ -10,7 +10,7 @@ import { PriorityStreamManager } from "./priority-stream-manager";
 import { TvCard } from "./tv-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
-import { updateGroupPlaylistAction, forceRefreshGroupAction } from "@/lib/actions";
+import { updateGroupPlaylistAction } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
