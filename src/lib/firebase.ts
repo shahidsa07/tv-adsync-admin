@@ -21,7 +21,6 @@ if (projectId && clientEmail && privateKey) {
     } else {
       app = initializeApp({
         credential: cert(credentials),
-        databaseURL: `https://${projectId}.firebaseio.com`
       });
     }
     db = getFirestore(app);

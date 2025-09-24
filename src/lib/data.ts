@@ -18,6 +18,7 @@ export const getGroups = async (): Promise<Group[]> => {
 };
 
 export const getAds = async (): Promise<Ad[]> => {
+  if (!db) return [];
   const { placeholderImages } = await import('./placeholder-images.json');
   return [
     { id: 'ad-1', type: 'image', url: placeholderImages[0]?.imageUrl || "https://picsum.photos/seed/ad1/1920/1080", order: 1, duration: 15 },
