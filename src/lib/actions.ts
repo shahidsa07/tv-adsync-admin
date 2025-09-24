@@ -9,6 +9,7 @@ export async function createGroupAction(name: string) {
   try {
     await data.createGroup(name);
     revalidatePath('/')
+    revalidatePath('/dashboard');
     return { success: true, message: `Group "${name}" created.` }
   } catch (error) {
     return { success: false, message: "Failed to create group." }
@@ -23,6 +24,8 @@ export async function registerTvAction(tvId: string, name: string) {
         }
         await data.createTv(tvId, name);
         revalidatePath('/');
+        revalidatePath('/dashboard');
+        revalidatePath('/tvs');
         return { success: true, message: `TV "${name}" registered successfully.` };
     } catch (error) {
         return { success: false, message: 'Failed to register TV.' };
@@ -32,7 +35,9 @@ export async function registerTvAction(tvId: string, name: string) {
 export async function updateTvNameAction(tvId: string, name: string) {
   try {
     await data.updateTv(tvId, { name });
-    revalidatePath('/')
+    revalidatePath('/');
+    revalidatePath('/dashboard');
+    revalidatePath('/tvs');
     revalidatePath(`/groups/`) // Also revalidate any group pages
     return { success: true, message: `TV name updated to "${name}".` }
   } catch (error) {
@@ -44,7 +49,11 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
   try {
     await data.updateTv(tvId, { groupId });
     revalidatePath('/');
-    revalidatePath(`/groups/${groupId}`);
+    revalidatePath('/dashboard');
+    revalidatePath('/tvs');
+    if (groupId) {
+      revalidatePath(`/groups/${groupId}`);
+    }
     return { success: true, message: `TV assigned successfully.` }
   } catch (error) {
     return { success: false, message: "Failed to assign TV." }
@@ -55,6 +64,7 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
     try {
         await data.updateGroupTvs(groupId, tvIds);
         revalidatePath('/');
+        revalidatePath('/dashboard');
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Group TVs updated.' };
     } catch (error) {
@@ -109,6 +119,8 @@ export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
     try {
         await data.setTvOnlineStatus(tvId, isOnline);
         revalidatePath('/');
+        revalidatePath('/dashboard');
+        revalidatePath('/tvs');
         revalidatePath('/groups');
         return { success: true, message: `TV status updated.` };
     } catch (error) {
