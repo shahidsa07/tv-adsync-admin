@@ -22,7 +22,7 @@ export default async function GroupDetailsPage({ params }: { params: { id: strin
           <Button asChild variant="outline" size="sm">
             <Link href="/dashboard">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
+              Back to TV Groups
             </Link>
           </Button>
         </div>

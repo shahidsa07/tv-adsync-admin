@@ -6,7 +6,7 @@ import Link from 'next/link';
 export default function Home() {
   const features = [
     {
-      title: 'Dashboard',
+      title: 'TV Groups',
       description: 'View and manage TV groups and unassigned devices.',
       href: '/dashboard',
       icon: <Monitor className="h-8 w-8" />,

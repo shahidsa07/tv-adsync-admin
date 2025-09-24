@@ -12,7 +12,7 @@ export default function Loading() {
             <Button asChild variant="outline" size="sm" disabled>
                 <span>
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Dashboard
+                    Back to TV Groups
                 </span>
             </Button>
         </div>
