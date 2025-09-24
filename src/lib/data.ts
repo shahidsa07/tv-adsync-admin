@@ -149,11 +149,10 @@ export const seedInitialData = async () => {
       const groupsSnapshot = await getDocs(collection(db, 'groups'));
       if (groupsSnapshot.empty) {
           console.log('Seeding initial Groups...');
-          const { placeholderImages } = await import('./placeholder-images.json');
           const ads: Ad[] = [
-            { id: 'ad-1', type: 'image', url: placeholderImages[0]?.imageUrl || "https://picsum.photos/seed/ad1/1920/1080", order: 1, duration: 15 },
+            { id: 'ad-1', type: 'image', url: "https://images.unsplash.com/photo-1533157950006-c38844053d55?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxhYnN0cmFjdCUyMGFydHxlbnwwfHx8fDE3NTg2MDQxMTR8MA&ixlib=rb-4.1.0&q=80&w=1080", order: 1, duration: 15 },
             { id: 'ad-2', type: 'video', url: 'https://test-videos.co.uk/vids/bigbuckbunny/mp4/h264/360/Big_Buck_Bunny_360_10s_1MB.mp4', order: 2 },
-            { id: 'ad-3', type: 'image', url: placeholderImages[1]?.imageUrl || "https://picsum.photos/seed/ad2/1920/1080", order: 3, duration: 10 },
+            { id: 'ad-3', type: 'image', url: "https://images.unsplash.com/photo-1690937956164-29ef80d706cb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjaXR5c2NhcGUlMjBuaWdodHxlbnwwfHx8fDE3NTg1OTg3Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080", order: 3, duration: 10 },
           ];
           const initialGroups: Group[] = [
               { id: 'group-1', name: 'Ground Floor TVs', ads: [ads[0]], priorityStream: null },
