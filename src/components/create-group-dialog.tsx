@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useTransition } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ interface CreateGroupDialogProps {
 
 export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps) {
   const [name, setName] = useState('');
-  const [isPending, setIsPending] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -25,16 +25,17 @@ export function CreateGroupDialog({ open, onOpenChange }: CreateGroupDialogProps
       toast({ variant: 'destructive', title: 'Error', description: 'Group name cannot be empty.' });
       return;
     }
-    setIsPending(true);
-    const result = await createGroupAction(name);
-    setIsPending(false);
-    if (result.success) {
-      toast({ title: 'Success', description: result.message });
-      setName('');
-      onOpenChange(false);
-    } else {
-      toast({ variant: 'destructive', title: 'Error', description: result.message });
-    }
+    
+    startTransition(async () => {
+      const result = await createGroupAction(name);
+      if (result.success) {
+        toast({ title: 'Success', description: result.message });
+        setName('');
+        onOpenChange(false);
+      } else {
+        toast({ variant: 'destructive', title: 'Error', description: result.message });
+      }
+    });
   };
 
   return (
