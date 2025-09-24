@@ -3,26 +3,23 @@
 import { revalidatePath } from 'next/cache'
 import * as data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
-import type { Ad, PriorityStream } from './definitions'
-
-const DB_UNAVAILABLE_ERROR = "Database is not available. Please check your Firebase credentials.";
+import type { Ad, Playlist, PriorityStream } from './definitions'
 
 // --- Group Actions ---
 
 export async function createGroupAction(name: string) {
-  if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
   try {
     await data.createGroup(name);
     revalidatePath('/groups');
     revalidatePath('/dashboard');
     return { success: true, message: `Group "${name}" created.` }
   } catch (error) {
-    return { success: false, message: "Failed to create group." }
+    const message = error instanceof Error ? error.message : "Failed to create group."
+    return { success: false, message }
   }
 }
 
 export async function deleteGroupAction(groupId: string) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         const tvsInGroup = await data.getTvsByGroupId(groupId);
         if (tvsInGroup.length > 0) {
@@ -32,12 +29,12 @@ export async function deleteGroupAction(groupId: string) {
         revalidatePath('/groups');
         return { success: true, message: "Group deleted successfully." };
     } catch (error) {
-        return { success: false, message: "Failed to delete group." };
+        const message = error instanceof Error ? error.message : "Failed to delete group."
+        return { success: false, message };
     }
 }
 
 export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         await data.updateGroupTvs(groupId, tvIds);
         revalidatePath('/');
@@ -46,18 +43,19 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Group TVs updated.' };
     } catch (error) {
-        return { success: false, message: 'Failed to update group TVs.' };
+        const message = error instanceof Error ? error.message : 'Failed to update group TVs.'
+        return { success: false, message };
     }
 }
 
 export async function updateGroupPlaylistAction(groupId: string, playlistId: string | null) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         await data.updateGroup(groupId, { playlistId });
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Group playlist updated.' };
     } catch (error) {
-        return { success: false, message: 'Failed to update playlist.' };
+        const message = error instanceof Error ? error.message : 'Failed to update playlist.'
+        return { success: false, message };
     }
 }
 
@@ -65,7 +63,6 @@ export async function updateGroupPlaylistAction(groupId: string, playlistId: str
 // --- TV Actions ---
 
 export async function registerTvAction(tvId: string, name: string) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         const existingTv = await data.getTvById(tvId);
         if (existingTv) {
@@ -78,12 +75,12 @@ export async function registerTvAction(tvId: string, name: string) {
         revalidatePath('/tvs');
         return { success: true, message: `TV "${name}" registered successfully.` };
     } catch (error) {
-        return { success: false, message: 'Failed to register TV.' };
+        const message = error instanceof Error ? error.message : 'Failed to register TV.'
+        return { success: false, message };
     }
 }
 
 export async function updateTvNameAction(tvId: string, name: string) {
-  if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
   try {
     await data.updateTv(tvId, { name });
     revalidatePath('/');
@@ -92,12 +89,12 @@ export async function updateTvNameAction(tvId: string, name: string) {
     revalidatePath(`/groups/`) // Also revalidate any group pages
     return { success: true, message: `TV name updated to "${name}".` }
   } catch (error) {
-    return { success: false, message: "Failed to update TV name." }
+    const message = error instanceof Error ? error.message : "Failed to update TV name."
+    return { success: false, message }
   }
 }
 
 export async function assignTvToGroupAction(tvId: string, groupId: string | null) {
-  if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
   try {
     await data.updateTv(tvId, { groupId });
 
@@ -109,16 +106,18 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
       revalidatePath(`/groups/${groupId}`);
     }
     const groups = await data.getGroups();
-    groups.forEach(g => revalidatePath(`/groups/${g.id}`));
+    if (groups) {
+      groups.forEach(g => revalidatePath(`/groups/${g.id}`));
+    }
 
     return { success: true, message: `TV assigned successfully.` }
   } catch (error) {
-    return { success: false, message: "Failed to assign TV." }
+    const message = error instanceof Error ? error.message : "Failed to assign TV."
+    return { success: false, message }
   }
 }
 
 export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         await data.setTvOnlineStatus(tvId, isOnline);
         revalidatePath('/');
@@ -133,31 +132,32 @@ export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
         
         return { success: true, message: `TV status updated.` };
     } catch (error) {
-        return { success: false, message: 'Failed to update TV status.' };
+        const message = error instanceof Error ? error.message : 'Failed to update TV status.'
+        return { success: false, message };
     }
 }
 
 // --- Priority Stream Actions ---
 
 export async function startPriorityStreamAction(groupId: string, stream: PriorityStream) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         await data.updatePriorityStream(groupId, stream);
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Priority stream started.' };
     } catch (error) {
-        return { success: false, message: 'Failed to start priority stream.' };
+        const message = error instanceof Error ? error.message : 'Failed to start priority stream.'
+        return { success: false, message };
     }
 }
 
 export async function stopPriorityStreamAction(groupId: string) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         await data.updatePriorityStream(groupId, null);
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Priority stream stopped.' };
     } catch (error) {
-        return { success: false, message: 'Failed to stop priority stream.' };
+        const message = error instanceof Error ? error.message : 'Failed to stop priority stream.'
+        return { success: false, message };
     }
 }
 
@@ -165,63 +165,65 @@ export async function stopPriorityStreamAction(groupId: string) {
 // --- Ad & Playlist Actions ---
 
 export async function createAdAction(name: string, type: 'image' | 'video', url: string, duration?: number) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         await data.createAd(name, type, url, duration);
         revalidatePath('/ads');
         revalidatePath('/playlists'); // Revalidate all playlist pages
         return { success: true, message: 'Ad created successfully.' };
     } catch (error) {
-        return { success: false, message: 'Failed to create ad.' };
+        const message = error instanceof Error ? error.message : 'Failed to create ad.'
+        return { success: false, message };
     }
 }
 
 export async function deleteAdAction(adId: string) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
-        // You might want to check if the ad is in any playlists before deleting
         await data.deleteAd(adId);
         revalidatePath('/ads');
         revalidatePath('/playlists');
+        const playlists = await data.getPlaylists();
+        if (playlists) {
+            playlists.forEach(p => revalidatePath(`/playlists/${p.id}`));
+        }
         return { success: true, message: 'Ad deleted successfully.' };
     } catch (error) {
-        return { success: false, message: 'Failed to delete ad.' };
+        const message = error instanceof Error ? error.message : 'Failed to delete ad.'
+        return { success: false, message };
     }
 }
 
 export async function createPlaylistAction(name: string) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
         await data.createPlaylist(name);
         revalidatePath('/playlists');
         revalidatePath('/groups');
         return { success: true, message: `Playlist "${name}" created.` };
     } catch (error) {
-        return { success: false, message: 'Failed to create playlist.' };
+        const message = error instanceof Error ? error.message : 'Failed to create playlist.'
+        return { success: false, message };
     }
 }
 
 export async function deletePlaylistAction(playlistId: string) {
-    if (!db) return { success: false, message: DB_UNAVAILABLE_ERROR };
     try {
-        // You might want to check if the playlist is used by any groups
         await data.deletePlaylist(playlistId);
         revalidatePath('/playlists');
         revalidatePath('/groups');
         return { success: true, message: 'Playlist deleted successfully.' };
     } catch (error) {
-        return { success: false, message: 'Failed to delete playlist.' };
+        const message = error instanceof Error ? error.message : 'Failed to delete playlist.'
+        return { success: false, message };
     }
 }
 
 export async function updatePlaylistAdsAction(playlistId: string, adIds: string[]) {
-    if (!db) return { success: false, message: DBUNAVAILABLE_ERROR };
     try {
         await data.updatePlaylist(playlistId, { adIds });
         revalidatePath(`/playlists/${playlistId}`);
         return { success: true, message: 'Playlist updated.' };
     } catch (error) {
-        return { success: false, message: 'Failed to update playlist.' };
+        const message = error instanceof Error ? error.message : 'Failed to update playlist.'
+        return { success: false, message };
     }
 }
 
@@ -239,5 +241,3 @@ export async function getAiGroupSuggestion(tvName: string, existingGroupNames: s
         return { success: false, message: 'AI suggestion service is unavailable.' };
     }
 }
-
-import { db } from '@/lib/firebase';
