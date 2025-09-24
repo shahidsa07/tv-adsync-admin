@@ -10,7 +10,7 @@ import { registerTvAction } from '@/lib/actions';
 import { Loader2, QrCode, Text, VideoOff } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { BarcodeScanner } from 'react-zxing';
+import { useZxing } from 'react-zxing';
 
 interface AddTvDialogProps {
   open: boolean;
@@ -23,12 +23,42 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manual");
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | undefined>(undefined);
+  const [isPaused, setIsPaused] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  
+  const { ref } = useZxing({
+    paused: isPaused || activeTab !== 'qr' || !open,
+    onResult(result) {
+      if (!isPending) {
+        const id = result.getText();
+        handleRegister(id);
+      }
+    },
+    onDecodeError(error) {
+      if (error) {
+        console.info(error);
+      }
+    },
+  });
+
+  useEffect(() => {
+    // Manually assign the ref to both refs.
+    if (ref) {
+      ref.current = videoRef.current;
+    }
+  }, [ref]);
+
 
   useEffect(() => {
     if (activeTab === 'qr' && open) {
+      setIsPaused(false);
       const getCameraPermission = async () => {
         try {
-            await navigator.mediaDevices.getUserMedia({ video: true });
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+            }
             setHasCameraPermission(true);
         } catch (error) {
             console.error('Error accessing camera:', error);
@@ -43,6 +73,8 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
         }
       };
       getCameraPermission();
+    } else {
+      setIsPaused(true);
     }
   }, [activeTab, open, toast]);
 
@@ -67,13 +99,6 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleRegister(tvId);
-  };
-
-  const handleQrResult = (result: any) => {
-    if (result && !isPending) {
-        const id = result.getText();
-        handleRegister(id);
-    }
   };
 
   return (
@@ -119,28 +144,19 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
             </TabsContent>
             <TabsContent value="qr" className="pt-4">
               <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted">
-                {activeTab === 'qr' && hasCameraPermission === true && (
-                    <BarcodeScanner
-                        onResult={handleQrResult}
-                        onError={(error) => {
-                            if (error) {
-                                console.info(error);
-                            }
-                        }}
-                    />
-                )}
-                 {hasCameraPermission === false && (
-                    <div className="flex h-full flex-col items-center justify-center p-4 text-center">
+                <video ref={videoRef} className="w-full h-full object-cover" />
+                {hasCameraPermission === false && (
+                    <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
                         <VideoOff className="mb-4 h-12 w-12 text-muted-foreground" />
                         <h3 className="font-semibold">Camera Access Denied</h3>
                         <p className="text-sm text-muted-foreground">Please grant camera permissions in your browser settings to use the QR scanner.</p>
                     </div>
-                 )}
-                 {hasCameraPermission === undefined && (
-                     <div className="flex h-full flex-col items-center justify-center">
+                )}
+                {hasCameraPermission === undefined && (
+                     <div className="absolute inset-0 flex h-full flex-col items-center justify-center bg-background/80">
                          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                      </div>
-                 )}
+                )}
               </div>
                <Alert className="mt-4">
                   <QrCode className="h-4 w-4" />
