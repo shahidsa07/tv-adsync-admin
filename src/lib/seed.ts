@@ -45,6 +45,7 @@ export const seedInitialData = async () => {
         const groupsToCreate = [
             { id: 'group-lobby', name: 'Lobby', playlistId: 'playlist-lobby', priorityStream: null },
             { id: 'group-cafe', name: 'Cafe', playlistId: 'playlist-cafe', priorityStream: null },
+            { id: 'group-empty', name: 'Empty Group', playlistId: null, priorityStream: null },
         ];
         groupsToCreate.forEach(group => {
             const groupRef = db.collection('groups').doc(group.id);
