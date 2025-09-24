@@ -5,7 +5,8 @@ import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query,
 
 const ensureDb = () => {
     if (!db) {
-        throw new Error("Firestore is not initialized. Please check your Firebase credentials.");
+        console.warn("Firestore is not initialized. Please check your Firebase credentials.");
+        return undefined;
     }
     return db;
 }
@@ -63,8 +64,9 @@ export const getTvsByGroupId = async (groupId: string): Promise<TV[]> => {
 
 // --- MUTATIONS ---
 
-export const createTv = async (tvId: string, name: string): Promise<TV> => {
+export const createTv = async (tvId: string, name: string): Promise<TV | undefined> => {
   const db = ensureDb();
+  if (!db) return undefined;
   const newTv: TV = {
     tvId,
     name: name || tvId,
@@ -75,8 +77,9 @@ export const createTv = async (tvId: string, name: string): Promise<TV> => {
   return newTv;
 };
 
-export const createGroup = async (name: string): Promise<Group> => {
+export const createGroup = async (name: string): Promise<Group | undefined> => {
     const db = ensureDb();
+    if (!db) return undefined;
     const id = `group-${Date.now()}`;
     const newGroup: Group = {
         id,
@@ -88,22 +91,26 @@ export const createGroup = async (name: string): Promise<Group> => {
     return newGroup;
 };
 
-export const deleteGroup = async (groupId: string): Promise<void> => {
+export const deleteGroup = async (groupId: string): Promise<boolean> => {
     const db = ensureDb();
+    if (!db) return false;
     const docRef = doc(db, "groups", groupId);
     await deleteDoc(docRef);
+    return true;
 };
 
-export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'groupId'>>): Promise<TV> => {
+export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'groupId'>>): Promise<TV | undefined> => {
   const db = ensureDb();
+  if (!db) return undefined;
   const docRef = doc(db, "tvs", tvId);
   await updateDoc(docRef, data);
   const docSnap = await getDoc(docRef);
   return docSnap.data() as TV;
 };
 
-export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<void> => {
+export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<boolean> => {
     const db = ensureDb();
+    if (!db) return false;
     const batch = writeBatch(db);
     
     const q = query(collection(db, "tvs"), where("groupId", "==", groupId));
@@ -121,10 +128,12 @@ export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<
     }
 
     await batch.commit();
+    return true;
 };
 
-export const updateGroupAds = async (groupId: string, newAds: Ad[]): Promise<Group> => {
+export const updateGroupAds = async (groupId: string, newAds: Ad[]): Promise<Group | undefined> => {
     const db = ensureDb();
+    if (!db) return undefined;
     const groupRef = doc(db, "groups", groupId);
     const adsWithOrder = newAds.map((ad, index) => ({...ad, id: ad.id.startsWith('new-') ? `ad-${Date.now()}-${index}`: ad.id, order: index + 1}));
     await updateDoc(groupRef, { ads: adsWithOrder });
@@ -132,16 +141,18 @@ export const updateGroupAds = async (groupId: string, newAds: Ad[]): Promise<Gro
     return docSnap.data() as Group;
 };
 
-export const updatePriorityStream = async (groupId: string, stream: PriorityStream | null): Promise<Group> => {
+export const updatePriorityStream = async (groupId: string, stream: PriorityStream | null): Promise<Group | undefined> => {
   const db = ensureDb();
+  if (!db) return undefined;
   const groupRef = doc(db, "groups", groupId);
   await updateDoc(groupRef, { priorityStream: stream });
   const docSnap = await getDoc(groupRef);
   return docSnap.data() as Group;
 };
 
-export const setTvOnlineStatus = async (tvId: string, isOnline: boolean): Promise<TV> => {
+export const setTvOnlineStatus = async (tvId: string, isOnline: boolean): Promise<TV | undefined> => {
     const db = ensureDb();
+    if (!db) return undefined;
     const docRef = doc(db, "tvs", tvId);
     const socketId = isOnline ? `socket-${Date.now()}` : null;
     await updateDoc(docRef, { socketId });

@@ -5,9 +5,12 @@ import * as data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
 import type { Ad, PriorityStream } from './definitions'
 
+const DB_UNAVAILABLE_ERROR = "Database is not available. Please check your Firebase credentials.";
+
 export async function createGroupAction(name: string) {
   try {
-    await data.createGroup(name);
+    const result = await data.createGroup(name);
+    if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
     revalidatePath('/groups');
     revalidatePath('/dashboard');
     return { success: true, message: `Group "${name}" created.` }
@@ -22,7 +25,8 @@ export async function deleteGroupAction(groupId: string) {
         if (tvsInGroup.length > 0) {
             return { success: false, message: "Cannot delete a group that has TVs assigned to it." };
         }
-        await data.deleteGroup(groupId);
+        const result = await data.deleteGroup(groupId);
+        if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
         revalidatePath('/groups');
         return { success: true, message: "Group deleted successfully." };
     } catch (error) {
@@ -36,7 +40,8 @@ export async function registerTvAction(tvId: string, name: string) {
         if (existingTv) {
             return { success: false, message: 'A TV with this ID is already registered.' };
         }
-        await data.createTv(tvId, name);
+        const result = await data.createTv(tvId, name);
+        if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/tvs');
@@ -48,7 +53,8 @@ export async function registerTvAction(tvId: string, name: string) {
 
 export async function updateTvNameAction(tvId: string, name: string) {
   try {
-    await data.updateTv(tvId, { name });
+    const result = await data.updateTv(tvId, { name });
+    if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
     revalidatePath('/');
     revalidatePath('/dashboard');
     revalidatePath('/tvs');
@@ -61,7 +67,9 @@ export async function updateTvNameAction(tvId: string, name: string) {
 
 export async function assignTvToGroupAction(tvId: string, groupId: string | null) {
   try {
-    await data.updateTv(tvId, { groupId });
+    const result = await data.updateTv(tvId, { groupId });
+    if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
+
     revalidatePath('/');
     revalidatePath('/dashboard');
     revalidatePath('/tvs');
@@ -81,7 +89,8 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
 
 export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
     try {
-        await data.updateGroupTvs(groupId, tvIds);
+        const result = await data.updateGroupTvs(groupId, tvIds);
+        if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/groups');
@@ -94,7 +103,8 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
 
 export async function updateGroupAdsAction(groupId: string, ads: Ad[]) {
     try {
-        await data.updateGroupAds(groupId, ads);
+        const result = await data.updateGroupAds(groupId, ads);
+        if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Ad playlist updated.' };
     } catch (error) {
@@ -104,7 +114,8 @@ export async function updateGroupAdsAction(groupId: string, ads: Ad[]) {
 
 export async function startPriorityStreamAction(groupId: string, stream: PriorityStream) {
     try {
-        await data.updatePriorityStream(groupId, stream);
+        const result = await data.updatePriorityStream(groupId, stream);
+        if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Priority stream started.' };
     } catch (error) {
@@ -114,7 +125,8 @@ export async function startPriorityStreamAction(groupId: string, stream: Priorit
 
 export async function stopPriorityStreamAction(groupId: string) {
     try {
-        await data.updatePriorityStream(groupId, null);
+        const result = await data.updatePriorityStream(groupId, null);
+        if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Priority stream stopped.' };
     } catch (error) {
@@ -137,7 +149,9 @@ export async function getAiGroupSuggestion(tvName: string, existingGroupNames: s
 
 export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
     try {
-        await data.setTvOnlineStatus(tvId, isOnline);
+        const result = await data.setTvOnlineStatus(tvId, isOnline);
+        if (!result) return { success: false, message: DB_UNAVAILABLE_ERROR };
+
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/tvs');
