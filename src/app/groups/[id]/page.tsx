@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
+export const dynamic = 'force-dynamic';
+
 export default async function GroupDetailsPage({ params }: { params: { id: string } }) {
   const group = await getGroupById(params.id);
   const allTvs = await getTvs();
