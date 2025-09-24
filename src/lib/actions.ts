@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache'
-import * as data from './data'
+import *data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
 import type { Ad, Playlist, PriorityStream, TV } from './definitions'
 import { notifyTv, notifyGroup } from './ws-notifications';
@@ -75,12 +75,19 @@ export async function updateGroupPlaylistAction(groupId: string, playlistId: str
 
 export async function registerTvAction(tvId: string, name: string) {
     try {
-        const existingTv = await data.getTvById(tvId);
+        // Sanitize the TV ID to make it Firestore-safe
+        const sanitizedTvId = tvId.trim().replace(/\//g, '_');
+        
+        if (!sanitizedTvId) {
+             return { success: false, message: 'TV ID cannot be empty.' };
+        }
+
+        const existingTv = await data.getTvById(sanitizedTvId);
         if (existingTv) {
             return { success: false, message: 'A TV with this ID is already registered.' };
         }
 
-        await data.createTv(tvId, name);
+        await data.createTv(sanitizedTvId, name);
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/tvs');
@@ -296,3 +303,5 @@ export async function getAiGroupSuggestion(tvName: string, existingGroupNames: s
         return { success: false, message: 'AI suggestion service is unavailable.' };
     }
 }
+
+    
