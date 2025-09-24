@@ -1,6 +1,6 @@
 import { Header } from '@/components/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clapperboard, Monitor, Tv, Users } from 'lucide-react';
+import { Clapperboard, Monitor, Tv, Users, ListVideo } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -19,15 +19,15 @@ export default function Home() {
     },
      {
       title: 'Ad Library',
-      description: 'Manage your advertising content and assets.',
+      description: 'Manage your global advertising content and assets.',
       href: '/ads',
       icon: <Clapperboard className="h-8 w-8" />,
     },
      {
-      title: 'Unassigned TVs',
-      description: 'View and manage TVs that are not yet in a group.',
-      href: '/dashboard', 
-      icon: <Monitor className="h-8 w-8" />,
+      title: 'Ad Playlists',
+      description: 'Create and manage reusable playlists of ads.',
+      href: '/playlists', 
+      icon: <ListVideo className="h-8 w-8" />,
     },
   ];
 

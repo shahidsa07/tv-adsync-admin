@@ -1,17 +1,16 @@
-import { getGroupById, getTvs, getPlaylists } from '@/lib/data';
+import { getPlaylistById, getAds } from '@/lib/data';
 import { notFound } from 'next/navigation';
 import { Header } from '@/components/header';
-import { GroupDetailsClient } from '@/components/group-details-client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
+import { PlaylistEditorClient } from '@/components/playlist-editor-client';
 
-export default async function GroupDetailsPage({ params }: { params: { id: string } }) {
-  const group = await getGroupById(params.id);
-  const allTvs = await getTvs();
-  const allPlaylists = await getPlaylists();
+export default async function PlaylistDetailsPage({ params }: { params: { id: string } }) {
+  const playlist = await getPlaylistById(params.id);
+  const allAds = await getAds();
 
-  if (!group) {
+  if (!playlist) {
     notFound();
   }
 
@@ -21,13 +20,13 @@ export default async function GroupDetailsPage({ params }: { params: { id: strin
       <main className="flex-1 p-4 sm:p-6 md:p-8">
         <div className="mb-4">
           <Button asChild variant="outline" size="sm">
-            <Link href="/groups">
+            <Link href="/playlists">
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to TV Groups
+              Back to Playlists
             </Link>
           </Button>
         </div>
-        <GroupDetailsClient initialGroup={group} allTvs={allTvs} allPlaylists={allPlaylists} />
+        <PlaylistEditorClient initialPlaylist={playlist} allAds={allAds} />
       </main>
     </div>
   );

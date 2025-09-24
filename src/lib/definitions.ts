@@ -1,9 +1,15 @@
 export interface Ad {
   id: string;
+  name: string;
   type: 'image' | 'video';
   url: string;
-  order: number;
-  duration?: number;
+  duration?: number; // Only for images
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  adIds: string[];
 }
 
 export interface PriorityStream {
@@ -21,6 +27,6 @@ export interface TV {
 export interface Group {
   id: string;
   name: string;
-  ads: Ad[];
+  playlistId: string | null;
   priorityStream: PriorityStream | null;
 }

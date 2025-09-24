@@ -2,11 +2,15 @@ import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { getAds } from '@/lib/data';
-import { AdLibraryClient } from '@/components/ad-library-client';
+import { getPlaylists } from '@/lib/data';
+import { PlaylistsClient } from '@/components/playlists-client';
+import { seedInitialData } from '@/lib/seed';
 
-export default async function AdsPage() {
-  const ads = await getAds();
+
+export default async function PlaylistsPage() {
+  await seedInitialData();
+  const playlists = await getPlaylists();
+
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />
@@ -19,7 +23,7 @@ export default async function AdsPage() {
             </Link>
           </Button>
         </div>
-        <AdLibraryClient initialAds={ads} />
+        <PlaylistsClient initialPlaylists={playlists} />
       </main>
     </div>
   );
