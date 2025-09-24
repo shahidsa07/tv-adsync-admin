@@ -3,7 +3,9 @@
 import { revalidatePath } from 'next/cache'
 import * as data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
-import type { Ad, Playlist, PriorityStream } from './definitions'
+import type { Ad, Playlist, PriorityStream, TV } from './definitions'
+import { notifyTv, notifyGroup } from './ws-notifications';
+
 
 // --- Group Actions ---
 
@@ -36,7 +38,15 @@ export async function deleteGroupAction(groupId: string) {
 
 export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
     try {
+        // Find which TVs were removed to notify them
+        const originalTvs = await data.getTvsByGroupId(groupId);
+        const originalTvIds = originalTvs.map(tv => tv.tvId);
+        
         await data.updateGroupTvs(groupId, tvIds);
+
+        const allAffectedIds = new Set([...originalTvIds, ...tvIds]);
+        allAffectedIds.forEach(tvId => notifyTv(tvId));
+
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/groups');
@@ -51,6 +61,7 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
 export async function updateGroupPlaylistAction(groupId: string, playlistId: string | null) {
     try {
         await data.updateGroup(groupId, { playlistId });
+        notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Group playlist updated.' };
     } catch (error) {
@@ -83,6 +94,7 @@ export async function registerTvAction(tvId: string, name: string) {
 export async function updateTvNameAction(tvId: string, name: string) {
   try {
     await data.updateTv(tvId, { name });
+    notifyTv(tvId);
     revalidatePath('/');
     revalidatePath('/dashboard');
     revalidatePath('/tvs');
@@ -97,6 +109,7 @@ export async function updateTvNameAction(tvId: string, name: string) {
 export async function assignTvToGroupAction(tvId: string, groupId: string | null) {
   try {
     await data.updateTv(tvId, { groupId });
+    notifyTv(tvId);
 
     revalidatePath('/');
     revalidatePath('/dashboard');
@@ -119,7 +132,7 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
 
 export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
     try {
-        await data.setTvOnlineStatus(tvId, isOnline);
+        await data.setTvOnlineStatus(tvId, isOnline, null); // Let the websocket server handle the socketId
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/tvs');
@@ -160,6 +173,7 @@ export async function deleteTvAction(tvId: string) {
 export async function startPriorityStreamAction(groupId: string, stream: PriorityStream) {
     try {
         await data.updatePriorityStream(groupId, stream);
+        notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Priority stream started.' };
     } catch (error) {
@@ -171,6 +185,7 @@ export async function startPriorityStreamAction(groupId: string, stream: Priorit
 export async function stopPriorityStreamAction(groupId: string) {
     try {
         await data.updatePriorityStream(groupId, null);
+        notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`);
         return { success: true, message: 'Priority stream stopped.' };
     } catch (error) {
@@ -197,12 +212,27 @@ export async function createAdAction(name: string, type: 'image' | 'video', url:
 export async function deleteAdAction(adId: string) {
     try {
         await data.deleteAd(adId);
+
+        const playlists = await data.getPlaylists();
+        const affectedGroups: Set<string> = new Set();
+        if (playlists) {
+            for (const playlist of playlists) {
+                if (playlist.adIds.includes(adId)) {
+                    // This playlist is affected. Find groups using it.
+                    const groups = await data.getGroupsByPlaylistId(playlist.id);
+                    groups.forEach(group => affectedGroups.add(group.id));
+                }
+            }
+        }
+        
+        affectedGroups.forEach(groupId => notifyGroup(groupId));
+
         revalidatePath('/ads');
         revalidatePath('/playlists');
-        const playlists = await data.getPlaylists();
         if (playlists) {
             playlists.forEach(p => revalidatePath(`/playlists/${p.id}`));
         }
+
         return { success: true, message: 'Ad deleted successfully.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to delete ad.'
@@ -224,7 +254,12 @@ export async function createPlaylistAction(name: string) {
 
 export async function deletePlaylistAction(playlistId: string) {
     try {
+        const groups = await data.getGroupsByPlaylistId(playlistId);
+        
         await data.deletePlaylist(playlistId);
+        
+        groups.forEach(group => notifyGroup(group.id));
+        
         revalidatePath('/playlists');
         revalidatePath('/groups');
         return { success: true, message: 'Playlist deleted successfully.' };
@@ -237,6 +272,8 @@ export async function deletePlaylistAction(playlistId: string) {
 export async function updatePlaylistAdsAction(playlistId: string, adIds: string[]) {
     try {
         await data.updatePlaylist(playlistId, { adIds });
+        const groups = await data.getGroupsByPlaylistId(playlistId);
+        groups.forEach(group => notifyGroup(group.id));
         revalidatePath(`/playlists/${playlistId}`);
         return { success: true, message: 'Playlist updated.' };
     } catch (error) {

@@ -1,6 +1,8 @@
 'server-only';
 import { db } from '@/lib/firebase';
 import type { TV, Group, Ad, Playlist, PriorityStream } from '@/lib/definitions';
+import { FieldValue } from 'firebase-admin/firestore';
+
 
 // --- GETTERS ---
 
@@ -52,6 +54,12 @@ export const getTvsByGroupId = async (groupId: string): Promise<TV[]> => {
   return snapshot.docs.map(doc => doc.data() as TV);
 };
 
+export const getGroupsByPlaylistId = async(playlistId: string): Promise<Group[]> => {
+    if (!db) return [];
+    const snapshot = await db.collection('groups').where('playlistId', '==', playlistId).get();
+    return snapshot.docs.map(doc => doc.data() as Group);
+}
+
 
 // --- MUTATIONS ---
 
@@ -77,10 +85,9 @@ export const deleteTv = async (tvId: string): Promise<boolean> => {
     return true;
 }
 
-export const setTvOnlineStatus = async (tvId: string, isOnline: boolean): Promise<TV | undefined> => {
+export const setTvOnlineStatus = async (tvId: string, isOnline: boolean, socketId: string | null): Promise<TV | undefined> => {
     if (!db) return undefined;
     const docRef = db.collection("tvs").doc(tvId);
-    const socketId = isOnline ? `socket-fake-${Date.now()}` : null;
     await docRef.update({ socketId });
     const docSnap = await docRef.get();
     return docSnap.data() as TV;
@@ -149,8 +156,18 @@ export const createAd = async (name: string, type: 'image' | 'video', url: strin
 
 export const deleteAd = async (adId: string): Promise<boolean> => {
     if (!db) return false;
-    // In a real app, you'd also remove this adId from all playlists.
-    await db.collection("ads").doc(adId).delete();
+    const batch = db.batch();
+    const adRef = db.collection("ads").doc(adId);
+    batch.delete(adRef);
+
+    // Remove the ad from all playlists that contain it
+    const playlistsSnapshot = await db.collection("playlists").where("adIds", "array-contains", adId).get();
+    playlistsSnapshot.forEach(doc => {
+        const playlistRef = db.collection("playlists").doc(doc.id);
+        batch.update(playlistRef, { adIds: FieldValue.arrayRemove(adId) });
+    });
+
+    await batch.commit();
     return true;
 };
 
@@ -173,7 +190,17 @@ export const updatePlaylist = async (playlistId: string, data: Partial<Pick<Play
 
 export const deletePlaylist = async (playlistId: string): Promise<boolean> => {
     if (!db) return false;
-    // In a real app, you'd check if this playlist is used by any groups.
-    await db.collection("playlists").doc(playlistId).delete();
+    const batch = db.batch();
+    const playlistRef = db.collection("playlists").doc(playlistId);
+    batch.delete(playlistRef);
+
+    // Unset this playlist from any groups that are using it.
+    const groupsSnapshot = await db.collection('groups').where('playlistId', '==', playlistId).get();
+    groupsSnapshot.forEach(doc => {
+        const groupRef = db.collection('groups').doc(doc.id);
+        batch.update(groupRef, { playlistId: null });
+    });
+    
+    await batch.commit();
     return true;
 };

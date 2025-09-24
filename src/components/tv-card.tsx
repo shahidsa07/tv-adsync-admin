@@ -9,7 +9,7 @@ import { AssignGroupDialog } from './assign-group-dialog';
 import { useState, useTransition } from 'react';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { updateTvNameAction, setTvOnlineAction, deleteTvAction } from '@/lib/actions';
+import { updateTvNameAction, deleteTvAction } from '@/lib/actions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 interface TvCardProps {
@@ -22,7 +22,6 @@ export function TvCard({ tv, groups }: TvCardProps) {
   const [isEditingName, setIsEditingName] = useState(false);
   const [newName, setNewName] = useState(tv.name);
   const [isNamePending, startNameTransition] = useTransition();
-  const [isStatusPending, startStatusTransition] = useTransition();
   const [isDeletePending, startDeleteTransition] = useTransition();
   const { toast } = useToast();
 
@@ -43,17 +42,6 @@ export function TvCard({ tv, groups }: TvCardProps) {
         setNewName(tv.name);
       }
       setIsEditingName(false);
-    });
-  }
-  
-  const handleToggleOnlineStatus = () => {
-    startStatusTransition(async () => {
-        const result = await setTvOnlineAction(tv.tvId, !isOnline);
-         if (result.success) {
-            toast({ title: 'Success', description: `TV is now ${!isOnline ? 'Online' : 'Offline'}.` });
-        } else {
-            toast({ variant: 'destructive', title: 'Error', description: result.message });
-        }
     });
   }
 
@@ -103,29 +91,17 @@ export function TvCard({ tv, groups }: TvCardProps) {
         </CardContent>
         <CardFooter className='gap-2'>
           <div className="w-full flex gap-2">
-            {isOnline ? (
-              <>
-                  {!group && (
-                      <Button className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
-                      Assign Group
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                  )}
-                  <Button variant="outline" className="flex-1" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
-                      {isStatusPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <WifiOff className="mr-2 h-4 w-4"/>}
-                      Disconnect
-                  </Button>
-              </>
-            ) : (
-              <Button variant="outline" className="flex-1" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
-                  {isStatusPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Wifi className="mr-2 h-4 w-4"/>}
-                  Connect
-              </Button>
+            {!group && (
+                <Button className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
+                Assign Group
+                <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
             )}
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="icon">
+                <Button variant="destructive" className='flex-1'>
                   <Trash2 className="h-4 w-4" />
+                  Delete
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
