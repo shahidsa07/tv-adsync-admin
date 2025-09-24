@@ -28,8 +28,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     if (activeTab === 'qr' && open) {
       const getCameraPermission = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            stream.getTracks().forEach(track => track.stop()); // Stop the stream immediately, react-zxing will ask for it again.
+            await navigator.mediaDevices.getUserMedia({ video: true });
             setHasCameraPermission(true);
         } catch (error) {
             console.error('Error accessing camera:', error);
