@@ -1,4 +1,3 @@
-
 'use server';
 
 import { revalidatePath } from 'next/cache'
@@ -258,7 +257,7 @@ export async function deleteAdAction(adId: string) {
         }
 
         return { success: true, message: 'Ad deleted successfully.' };
-    } catch (error) {
+    } catch (error)_ {
         const message = error instanceof Error ? error.message : 'Failed to delete ad.'
         return { success: false, message };
     }
