@@ -222,9 +222,32 @@ export async function createAdAction(name: string, type: 'image' | 'video', url:
     }
 }
 
+export async function updateAdAction(adId: string, adData: Partial<Pick<Ad, 'name' | 'type' | 'url' | 'duration'>>) {
+    try {
+        await data.updateAd(adId, adData);
+
+        const playlists = await data.getPlaylistsContainingAd(adId);
+        const affectedGroups: Set<string> = new Set();
+        if (playlists) {
+            for (const playlist of playlists) {
+                const groups = await data.getGroupsByPlaylistId(playlist.id);
+                groups.forEach(group => affectedGroups.add(group.id));
+            }
+        }
+        affectedGroups.forEach(groupId => notifyGroup(groupId));
+
+        revalidatePath('/ads');
+        revalidatePath('/playlists', 'layout');
+        return { success: true, message: 'Ad updated successfully.' };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update ad.'
+        return { success: false, message };
+    }
+}
+
 export async function deleteAdAction(adId: string) {
     try {
-        const playlists = await data.getPlaylists();
+        const playlists = await data.getPlaylistsContainingAd(adId);
         const affectedGroups: Set<string> = new Set();
         if (playlists) {
             for (const playlist of playlists) {

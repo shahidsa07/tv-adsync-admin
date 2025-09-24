@@ -60,6 +60,12 @@ export const getGroupsByPlaylistId = async(playlistId: string): Promise<Group[]>
     return snapshot.docs.map(doc => doc.data() as Group);
 }
 
+export const getPlaylistsContainingAd = async(adId: string): Promise<Playlist[]> => {
+    if (!db) return [];
+    const snapshot = await db.collection('playlists').where('adIds', 'array-contains', adId).get();
+    return snapshot.docs.map(doc => doc.data() as Playlist);
+}
+
 
 // --- MUTATIONS ---
 
@@ -152,6 +158,21 @@ export const createAd = async (name: string, type: 'image' | 'video', url: strin
     }
     await db.collection("ads").doc(id).set(newAd);
     return newAd;
+};
+
+export const updateAd = async (adId: string, data: Partial<Pick<Ad, 'name' | 'type' | 'url' | 'duration'>>): Promise<Ad | undefined> => {
+    if (!db) return undefined;
+    const docRef = db.collection("ads").doc(adId);
+    
+    const updateData: any = { ...data };
+    if (data.type === 'video') {
+        // Ensure duration is removed for videos
+        updateData.duration = FieldValue.delete();
+    }
+    
+    await docRef.update(updateData);
+    const docSnap = await docRef.get();
+    return docSnap.data() as Ad;
 };
 
 export const deleteAd = async (adId: string): Promise<boolean> => {

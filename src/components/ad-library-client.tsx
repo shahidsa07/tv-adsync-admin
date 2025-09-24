@@ -3,7 +3,7 @@
 import type { Ad } from "@/lib/definitions";
 import { useState } from "react";
 import { Button } from "./ui/button";
-import { PlusCircle, Trash2, Loader2, FileImage, Video } from "lucide-react";
+import { PlusCircle, Trash2, Loader2, FileImage, Video, Pencil } from "lucide-react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 import Image from "next/image";
@@ -22,6 +22,7 @@ import { useTransition } from 'react';
 import { deleteAdAction } from '@/lib/actions';
 import { useToast } from '@/hooks/use-toast';
 import { AddAdDialog } from "./add-ad-dialog";
+import { EditAdDialog } from "./edit-ad-dialog";
 
 interface AdLibraryClientProps {
     initialAds: Ad[];
@@ -30,6 +31,7 @@ interface AdLibraryClientProps {
 export function AdLibraryClient({ initialAds }: AdLibraryClientProps) {
     const [ads, setAds] = useState(initialAds);
     const [showAddAdDialog, setShowAddAdDialog] = useState(false);
+    const [editingAd, setEditingAd] = useState<Ad | null>(null);
 
     return (
         <div className="space-y-6">
@@ -47,7 +49,7 @@ export function AdLibraryClient({ initialAds }: AdLibraryClientProps) {
             {ads.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {ads.map(ad => (
-                        <AdCard key={ad.id} ad={ad} />
+                        <AdCard key={ad.id} ad={ad} onEdit={() => setEditingAd(ad)} />
                     ))}
                 </div>
             ) : (
@@ -57,11 +59,18 @@ export function AdLibraryClient({ initialAds }: AdLibraryClientProps) {
             )}
 
             <AddAdDialog open={showAddAdDialog} onOpenChange={setShowAddAdDialog} />
+            {editingAd && (
+                <EditAdDialog
+                    open={!!editingAd}
+                    onOpenChange={(isOpen) => !isOpen && setEditingAd(null)}
+                    ad={editingAd}
+                />
+            )}
         </div>
     );
 }
 
-function AdCard({ ad }: { ad: Ad }) {
+function AdCard({ ad, onEdit }: { ad: Ad, onEdit: () => void }) {
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
 
@@ -100,12 +109,16 @@ function AdCard({ ad }: { ad: Ad }) {
                 </div>
                 <CardDescription className="text-xs truncate mt-2">{ad.url}</CardDescription>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="grid grid-cols-2 gap-2">
+                 <Button variant="outline" onClick={onEdit}>
+                    <Pencil className="mr-2" />
+                    Edit
+                </Button>
                  <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="w-full">
+                        <Button variant="destructive">
                             <Trash2 className="mr-2" />
-                            Delete Ad
+                            Delete
                         </Button>
                     </AlertDialogTrigger>
                     <AlertDialogContent>
