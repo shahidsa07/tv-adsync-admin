@@ -29,7 +29,6 @@ interface AdLibraryClientProps {
 }
 
 export function AdLibraryClient({ initialAds }: AdLibraryClientProps) {
-    const [ads, setAds] = useState(initialAds);
     const [showAddAdDialog, setShowAddAdDialog] = useState(false);
     const [editingAd, setEditingAd] = useState<Ad | null>(null);
 
@@ -46,9 +45,9 @@ export function AdLibraryClient({ initialAds }: AdLibraryClientProps) {
                 </Button>
             </div>
             
-            {ads.length > 0 ? (
+            {initialAds.length > 0 ? (
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {ads.map(ad => (
+                    {initialAds.map(ad => (
                         <AdCard key={ad.id} ad={ad} onEdit={() => setEditingAd(ad)} />
                     ))}
                 </div>
