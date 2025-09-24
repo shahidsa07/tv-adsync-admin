@@ -257,7 +257,7 @@ export async function deleteAdAction(adId: string) {
         }
 
         return { success: true, message: 'Ad deleted successfully.' };
-    } catch (error)_ {
+    } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to delete ad.'
         return { success: false, message };
     }
