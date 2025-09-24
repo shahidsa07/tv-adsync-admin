@@ -218,8 +218,6 @@ export async function createAdAction(name: string, type: 'image' | 'video', url:
 
 export async function deleteAdAction(adId: string) {
     try {
-        await data.deleteAd(adId);
-
         const playlists = await data.getPlaylists();
         const affectedGroups: Set<string> = new Set();
         if (playlists) {
@@ -231,6 +229,8 @@ export async function deleteAdAction(adId: string) {
                 }
             }
         }
+        
+        await data.deleteAd(adId);
         
         affectedGroups.forEach(groupId => notifyGroup(groupId));
 
