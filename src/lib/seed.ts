@@ -1,10 +1,9 @@
 import { db } from './firebase';
-import { collection, doc, writeBatch, getDocs } from 'firebase/firestore';
 
 const seedInitialData = async () => {
     console.log('Checking for existing data...');
-    const tvsSnapshot = await getDocs(collection(db, 'tvs'));
-    const groupsSnapshot = await getDocs(collection(db, 'groups'));
+    const tvsSnapshot = await db.collection('tvs').get();
+    const groupsSnapshot = await db.collection('groups').get();
 
     if (!tvsSnapshot.empty || !groupsSnapshot.empty) {
         console.log('Data already exists. Skipping seed.');
@@ -12,7 +11,7 @@ const seedInitialData = async () => {
     }
 
     console.log('No data found. Seeding initial data...');
-    const batch = writeBatch(db);
+    const batch = db.batch();
 
     const tvsToCreate = [
         { tvId: 'tv-lobby-main-001', name: 'Lobby Main TV', groupId: 'group-lobby' },
@@ -23,7 +22,7 @@ const seedInitialData = async () => {
     ];
     
     tvsToCreate.forEach(tv => {
-        const tvRef = doc(db, 'tvs', tv.tvId);
+        const tvRef = db.collection('tvs').doc(tv.tvId);
         batch.set(tvRef, { ...tv, socketId: null });
     });
 
@@ -48,7 +47,7 @@ const seedInitialData = async () => {
     ];
 
     groupsToCreate.forEach(group => {
-        const groupRef = doc(db, 'groups', group.id);
+        const groupRef = db.collection('groups').doc(group.id);
         batch.set(groupRef, group);
     });
 

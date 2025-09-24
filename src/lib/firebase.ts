@@ -1,16 +1,26 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getApps, initializeApp, cert } from 'firebase-admin/app';
+import { getFirestore } from 'firebase-admin/firestore';
 
-const firebaseConfig = {
-  projectId: "studio-7399364451-b8cc3",
-  appId: "1:96736714317:web:668d8776dad8d6046dc604",
-  apiKey: "AIzaSyChylDhBqFWeGOgr8ONlJ0YK24hyNHtnBE",
-  authDomain: "studio-7399364451-b8cc3.firebaseapp.com",
+// This is a service account that can be used to authenticate with Firebase Admin.
+// It is safe to use in a server-only environment.
+// Do not expose this to the client.
+const serviceAccount = {
+  projectId: 'studio-7399364451-b8cc3',
+  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
 };
 
-// Initialize Firebase
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
+function getFirebaseAdminApp() {
+  if (getApps().length > 0) {
+    return getApps()[0];
+  }
+
+  return initializeApp({
+    credential: cert(serviceAccount),
+  });
+}
+
+const app = getFirebaseAdminApp();
 const db = getFirestore(app);
 
 export { app, db };
