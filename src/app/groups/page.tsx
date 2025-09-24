@@ -1,4 +1,4 @@
-import { getTvs, getGroups, seedInitialData } from '@/lib/data';
+import { getTvs, getGroups } from '@/lib/data';
 import { Header } from '@/components/header';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { GroupsClient } from '@/components/groups-client';
 
 export default async function GroupsPage() {
-  await seedInitialData(); // Seed data if necessary
   const tvs = await getTvs();
   const groups = await getGroups();
 
