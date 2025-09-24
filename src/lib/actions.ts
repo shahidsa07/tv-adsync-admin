@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache'
-import *data from './data'
+import * as data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
 import type { Ad, Playlist, PriorityStream, TV } from './definitions'
 import { notifyTv, notifyGroup } from './ws-notifications';
@@ -284,7 +284,7 @@ export async function updatePlaylistAdsAction(playlistId: string, adIds: string[
         revalidatePath(`/playlists/${playlistId}`);
         return { success: true, message: 'Playlist updated.' };
     } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update playlist.'
+        const message = error instanceof Error ? error.message : 'Failed to update playlist.';
         return { success: false, message };
     }
 }
@@ -303,5 +303,3 @@ export async function getAiGroupSuggestion(tvName: string, existingGroupNames: s
         return { success: false, message: 'AI suggestion service is unavailable.' };
     }
 }
-
-    
