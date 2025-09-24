@@ -71,6 +71,12 @@ export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'gr
   return docSnap.data() as TV;
 };
 
+export const deleteTv = async (tvId: string): Promise<boolean> => {
+    if (!db) return false;
+    await db.collection("tvs").doc(tvId).delete();
+    return true;
+}
+
 export const setTvOnlineStatus = async (tvId: string, isOnline: boolean): Promise<TV | undefined> => {
     if (!db) return undefined;
     const docRef = db.collection("tvs").doc(tvId);

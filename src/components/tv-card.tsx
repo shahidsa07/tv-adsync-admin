@@ -4,12 +4,13 @@ import type { TV, Group } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Monitor, ArrowRight, Pencil, Check, X, Wifi, WifiOff, Loader2 } from 'lucide-react';
+import { Monitor, ArrowRight, Pencil, Check, X, Wifi, WifiOff, Loader2, Trash2 } from 'lucide-react';
 import { AssignGroupDialog } from './assign-group-dialog';
 import { useState, useTransition } from 'react';
 import { Input } from './ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { updateTvNameAction, setTvOnlineAction } from '@/lib/actions';
+import { updateTvNameAction, setTvOnlineAction, deleteTvAction } from '@/lib/actions';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 
 interface TvCardProps {
   tv: TV;
@@ -22,6 +23,7 @@ export function TvCard({ tv, groups }: TvCardProps) {
   const [newName, setNewName] = useState(tv.name);
   const [isNamePending, startNameTransition] = useTransition();
   const [isStatusPending, startStatusTransition] = useTransition();
+  const [isDeletePending, startDeleteTransition] = useTransition();
   const { toast } = useToast();
 
   const isOnline = !!tv.socketId;
@@ -36,8 +38,6 @@ export function TvCard({ tv, groups }: TvCardProps) {
       const result = await updateTvNameAction(tv.tvId, newName);
       if (result.success) {
         toast({ title: 'Success', description: result.message });
-        // In a real app with subscriptions, you wouldn't need to manually update state
-        // but for now this keeps the UI in sync. We can also revalidate the path.
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
         setNewName(tv.name);
@@ -51,6 +51,17 @@ export function TvCard({ tv, groups }: TvCardProps) {
         const result = await setTvOnlineAction(tv.tvId, !isOnline);
          if (result.success) {
             toast({ title: 'Success', description: `TV is now ${!isOnline ? 'Online' : 'Offline'}.` });
+        } else {
+            toast({ variant: 'destructive', title: 'Error', description: result.message });
+        }
+    });
+  }
+
+  const handleDelete = () => {
+    startDeleteTransition(async () => {
+        const result = await deleteTvAction(tv.tvId);
+        if (result.success) {
+            toast({ title: 'Success', description: result.message });
         } else {
             toast({ variant: 'destructive', title: 'Error', description: result.message });
         }
@@ -91,25 +102,49 @@ export function TvCard({ tv, groups }: TvCardProps) {
           </div>
         </CardContent>
         <CardFooter className='gap-2'>
-          {isOnline ? (
-            <>
-                {!group && (
-                    <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
-                    Assign Group
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                )}
-                <Button variant="outline" className="w-full" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
-                    {isStatusPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <WifiOff className="mr-2 h-4 w-4"/>}
-                    Simulate Disconnect
+          <div className="w-full flex gap-2">
+            {isOnline ? (
+              <>
+                  {!group && (
+                      <Button className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
+                      Assign Group
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                  )}
+                  <Button variant="outline" className="flex-1" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
+                      {isStatusPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <WifiOff className="mr-2 h-4 w-4"/>}
+                      Disconnect
+                  </Button>
+              </>
+            ) : (
+              <Button variant="outline" className="flex-1" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
+                  {isStatusPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Wifi className="mr-2 h-4 w-4"/>}
+                  Connect
+              </Button>
+            )}
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash2 className="h-4 w-4" />
                 </Button>
-            </>
-          ) : (
-             <Button variant="outline" className="w-full" onClick={handleToggleOnlineStatus} disabled={isStatusPending}>
-                {isStatusPending ? <Loader2 className='mr-2 h-4 w-4 animate-spin' /> : <Wifi className="mr-2 h-4 w-4"/>}
-                Simulate Connect
-            </Button>
-          )}
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete the TV <strong>{tv.name}</strong>. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleDelete} disabled={isDeletePending}>
+                    {isDeletePending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                    Delete TV
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
         </CardFooter>
       </Card>
       {isOnline && <AssignGroupDialog open={isAssigning} onOpenChange={setIsAssigning} tv={tv} groups={groups} />}

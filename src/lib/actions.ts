@@ -137,6 +137,24 @@ export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
     }
 }
 
+export async function deleteTvAction(tvId: string) {
+    try {
+        await data.deleteTv(tvId);
+        revalidatePath('/');
+        revalidatePath('/dashboard');
+        revalidatePath('/tvs');
+        revalidatePath('/groups');
+        const groups = await data.getGroups();
+        if (groups) {
+          groups.forEach(g => revalidatePath(`/groups/${g.id}`));
+        }
+        return { success: true, message: 'TV deleted successfully.' };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to delete TV.'
+        return { success: false, message };
+    }
+}
+
 // --- Priority Stream Actions ---
 
 export async function startPriorityStreamAction(groupId: string, stream: PriorityStream) {
