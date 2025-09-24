@@ -20,7 +20,7 @@ export default async function GroupDetailsPage({ params }: { params: { id: strin
       <main className="flex-1 p-4 sm:p-6 md:p-8">
         <div className="mb-4">
           <Button asChild variant="outline" size="sm">
-            <Link href="/">
+            <Link href="/dashboard">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Link>

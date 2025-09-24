@@ -1,17 +1,59 @@
-import { getTvs, getGroups, seedInitialData } from '@/lib/data';
-import { DashboardClient } from '@/components/dashboard-client';
 import { Header } from '@/components/header';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Clapperboard, Monitor, Tv, Users } from 'lucide-react';
+import Link from 'next/link';
 
-export default async function Home() {
-  await seedInitialData();
-  const tvs = await getTvs();
-  const groups = await getGroups();
+export default function Home() {
+  const features = [
+    {
+      title: 'Dashboard',
+      description: 'View and manage TV groups and unassigned devices.',
+      href: '/dashboard',
+      icon: <Monitor className="h-8 w-8" />,
+    },
+    {
+      title: 'TVs',
+      description: 'See a list of all registered TVs and their status.',
+      href: '/tvs',
+      icon: <Tv className="h-8 w-8" />,
+    },
+     {
+      title: 'Ad Library',
+      description: 'Manage your advertising content and assets.',
+      href: '/ads',
+      icon: <Clapperboard className="h-8 w-8" />,
+    },
+     {
+      title: 'Playlists',
+      description: 'Create and edit ad playlists for your TV groups.',
+      href: '/dashboard', // Playlists are managed within groups on the dashboard
+      icon: <Users className="h-8 w-8" />,
+    },
+  ];
 
   return (
     <div className="flex min-h-screen w-full flex-col">
       <Header />
       <main className="flex-1 p-4 sm:p-6 md:p-8">
-        <DashboardClient initialTvs={tvs} initialGroups={groups} />
+        <div className="mb-8">
+            <h1 className="text-3xl font-bold font-headline">Welcome to SignageWise</h1>
+            <p className="text-muted-foreground">Select a feature below to get started.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+          {features.map((feature) => (
+            <Link key={feature.title} href={feature.href} className="block hover:shadow-lg transition-shadow duration-200 rounded-lg">
+                <Card className="h-full hover:border-primary/80 transition-colors">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-xl font-headline tracking-tight">{feature.title}</CardTitle>
+                        {feature.icon}
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">{feature.description}</p>
+                    </CardContent>
+                </Card>
+            </Link>
+          ))}
+        </div>
       </main>
     </div>
   );

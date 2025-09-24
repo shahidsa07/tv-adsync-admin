@@ -12,7 +12,7 @@ interface GroupCardProps {
 export function GroupCard({ group, tvCount }: GroupCardProps) {
   return (
     <Link href={`/groups/${group.id}`} className="block hover:shadow-lg transition-shadow duration-200 rounded-lg">
-      <Card className="h-full">
+      <Card className="h-full hover:border-primary/80 transition-colors">
         <CardHeader>
           <CardTitle className="font-headline tracking-tight">{group.name}</CardTitle>
           <CardDescription>Click to manage group</CardDescription>
