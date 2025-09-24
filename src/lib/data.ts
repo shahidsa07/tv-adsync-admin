@@ -3,14 +3,9 @@ import { db } from '@/lib/firebase';
 import type { TV, Group, Ad, PriorityStream } from '@/lib/definitions';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where, deleteDoc } from 'firebase/firestore';
 
-const seeded = false;
-
 // --- GETTERS ---
 
 export const getTvs = async (): Promise<TV[]> => {
-  if (!seeded) {
-    await seedInitialData();
-  }
   const querySnapshot = await getDocs(collection(db, "tvs"));
   return querySnapshot.docs.map(doc => doc.data() as TV);
 };
