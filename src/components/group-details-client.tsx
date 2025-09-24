@@ -3,14 +3,14 @@
 import type { Group, TV, Playlist } from "@/lib/definitions";
 import { useState, useTransition } from "react";
 import { Button } from "./ui/button";
-import { Users, Clapperboard, MonitorPlay, Loader2 } from 'lucide-react';
+import { Users, Clapperboard, MonitorPlay, Loader2, RefreshCw } from 'lucide-react';
 import { ManageGroupTvsDialog } from "./manage-group-tvs-dialog";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
 import { PriorityStreamManager } from "./priority-stream-manager";
 import { TvCard } from "./tv-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import { Label } from "./ui/label";
-import { updateGroupPlaylistAction } from "@/lib/actions";
+import { updateGroupPlaylistAction, forceRefreshGroupAction } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 
@@ -23,23 +23,23 @@ interface GroupDetailsClientProps {
 export function GroupDetailsClient({ initialGroup, allTvs, allPlaylists }: GroupDetailsClientProps) {
     const [group, setGroup] = useState(initialGroup);
     const [showManageTvs, setShowManageTvs] = useState(false);
-    const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | undefined>(group.playlistId ?? undefined);
+    const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(group.playlistId ?? null);
     const [isPlaylistPending, startPlaylistTransition] = useTransition();
     const { toast } = useToast();
 
     const assignedTvs = allTvs.filter(tv => tv.groupId === group.id);
     const currentPlaylist = allPlaylists.find(p => p.id === group.playlistId);
 
-    const handlePlaylistChange = (playlistId: string) => {
-        const newPlaylistId = playlistId === "none" ? null : playlistId;
+    const handleApplyPlaylistChange = () => {
         startPlaylistTransition(async () => {
-            const result = await updateGroupPlaylistAction(group.id, newPlaylistId);
+            const result = await updateGroupPlaylistAction(group.id, selectedPlaylistId);
             if (result.success) {
                 toast({ title: "Success", description: "Playlist updated for this group."});
-                setGroup(prev => ({...prev, playlistId: newPlaylistId }));
-                setSelectedPlaylistId(newPlaylistId ?? undefined);
+                setGroup(prev => ({...prev, playlistId: selectedPlaylistId }));
             } else {
                 toast({ variant: 'destructive', title: "Error", description: result.message });
+                // Revert selection on failure
+                setSelectedPlaylistId(group.playlistId);
             }
         });
     }
@@ -76,19 +76,25 @@ export function GroupDetailsClient({ initialGroup, allTvs, allPlaylists }: Group
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="playlist-select">Active Playlist</Label>
-                                <Select value={selectedPlaylistId ?? 'none'} onValueChange={handlePlaylistChange} disabled={isPlaylistPending}>
-                                    <SelectTrigger id="playlist-select">
-                                        <SelectValue placeholder="Select a playlist..." />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">No Playlist</SelectItem>
-                                        {allPlaylists.map(p => (
-                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
+                                <div className="flex gap-2">
+                                    <Select value={selectedPlaylistId ?? 'none'} onValueChange={(value) => setSelectedPlaylistId(value === 'none' ? null : value)} disabled={isPlaylistPending}>
+                                        <SelectTrigger id="playlist-select">
+                                            <SelectValue placeholder="Select a playlist..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="none">No Playlist</SelectItem>
+                                            {allPlaylists.map(p => (
+                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button onClick={handleApplyPlaylistChange} disabled={isPlaylistPending || selectedPlaylistId === group.playlistId}>
+                                        {isPlaylistPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Apply
+                                    </Button>
+                                </div>
                             </div>
-                            {isPlaylistPending && <div className="flex items-center text-sm text-muted-foreground"><Loader2 className="mr-2 h-4 w-4 animate-spin"/> Updating...</div>}
+                            
                             {currentPlaylist && (
                                 <div className="p-3 border rounded-lg bg-muted/50 space-y-2">
                                     <h4 className="font-semibold">{currentPlaylist.name}</h4>

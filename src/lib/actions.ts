@@ -70,6 +70,16 @@ export async function updateGroupPlaylistAction(groupId: string, playlistId: str
     }
 }
 
+export async function forceRefreshGroupAction(groupId: string) {
+    try {
+        notifyGroup(groupId);
+        return { success: true, message: 'Refresh signal sent to group.' };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to send refresh signal.'
+        return { success: false, message };
+    }
+}
+
 
 // --- TV Actions ---
 
