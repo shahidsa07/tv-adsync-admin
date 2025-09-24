@@ -1,3 +1,4 @@
+import 'server-only';
 import { db } from '@/lib/firebase';
 import type { TV, Group, Ad, PriorityStream } from '@/lib/definitions';
 import { collection, doc, getDoc, getDocs, setDoc, updateDoc, writeBatch, query, where } from 'firebase/firestore';
