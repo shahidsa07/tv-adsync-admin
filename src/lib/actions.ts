@@ -115,8 +115,16 @@ export async function updateTvNameAction(tvId: string, name: string) {
 
 export async function assignTvToGroupAction(tvId: string, groupId: string | null) {
   try {
+    const oldTvData = await data.getTvById(tvId);
+    const oldGroupId = oldTvData?.groupId;
+
     await data.updateTv(tvId, { groupId });
-    notifyTv(tvId);
+    notifyTv(tvId); // Notify the TV that was moved
+
+    // Also notify the group it was removed from, if any
+    if(oldGroupId) {
+        notifyGroup(oldGroupId);
+    }
 
     revalidatePath('/');
     revalidatePath('/dashboard');
@@ -131,7 +139,8 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
     }
 
     return { success: true, message: `TV assigned successfully.` }
-  } catch (error) {
+  } catch (error)
+   {
     const message = error instanceof Error ? error.message : "Failed to assign TV."
     return { success: false, message }
   }
@@ -159,7 +168,14 @@ export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
 
 export async function deleteTvAction(tvId: string) {
     try {
+        const tv = await data.getTvById(tvId);
+        // We notify the TV before deleting it from the database.
+        // The client should handle this gracefully (e.g. show registration screen).
+        if (tv) {
+            notifyTv(tv.tvId);
+        }
         await data.deleteTv(tvId);
+
         revalidatePath('/');
         revalidatePath('/dashboard');
         revalidatePath('/tvs');
