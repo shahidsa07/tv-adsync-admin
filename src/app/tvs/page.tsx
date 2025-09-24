@@ -1,4 +1,4 @@
-import { getTvs, getGroups } from '@/lib/data';
+import { getTvs, getGroups, seedInitialData } from '@/lib/data';
 import { Header } from '@/components/header';
 import { TvCard } from '@/components/tv-card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,7 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 export default async function TvsPage() {
+  await seedInitialData(); // Seed data if necessary
   const tvs = await getTvs();
   const groups = await getGroups();
 
