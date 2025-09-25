@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 config(); // Load environment variables from .env file
 
 import { WebSocketServer, WebSocket } from 'ws';
-import { getTvById, setTvOnlineStatus, getTvsByGroupId } from './lib/data';
+import { getTvById, getTvsByGroupId } from './lib/data';
 import chokidar from 'chokidar';
 import fs from 'fs/promises';
 import path from 'path';
@@ -14,6 +14,12 @@ const wss = new WebSocketServer({ port: PORT });
 // In-memory mapping of tvId to WebSocket connection
 const tvConnections = new Map<string, WebSocket>();
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
+
+// The URL for the internal API route in the Next.js app
+const NEXTJS_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
+const TV_STATUS_API_ENDPOINT = `${NEXTJS_APP_URL}/api/tv-status`;
+const API_SECRET = process.env.INTERNAL_API_SECRET || 'your-secret-key';
+
 
 console.log(`WebSocket server started on ws://localhost:${PORT}`);
 
@@ -43,7 +49,7 @@ const setupNotificationWatcher = async () => {
                 // Clean up the notification file
                 await fs.unlink(filePath);
 
-            } catch (error) {
+            } catch (error) => {
                 console.error(`Error processing notification file ${filePath}:`, error);
             }
         });
@@ -52,6 +58,35 @@ const setupNotificationWatcher = async () => {
         console.error('Error setting up notification watcher:', error);
     }
 }
+
+/**
+ * Notifies the Next.js app to update the TV's online status.
+ */
+const updateTvOnlineStatus = async (tvId: string, isOnline: boolean, socketId: string | null) => {
+    try {
+        console.log(`Notifying Next.js to update status for ${tvId} to ${isOnline ? 'online' : 'offline'}`);
+        const response = await fetch(TV_STATUS_API_ENDPOINT, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_SECRET}`
+            },
+            body: JSON.stringify({ tvId, isOnline, socketId }),
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`API call failed with status ${response.status}: ${errorText}`);
+        }
+
+        const result = await response.json();
+        console.log(`Successfully notified Next.js for ${tvId}:`, result.message);
+
+    } catch (error) {
+        console.error(`Failed to update TV online status via API for ${tvId}:`, error);
+    }
+};
+
 
 const sendRefresh = (tvId: string) => {
     const ws = tvConnections.get(tvId);
@@ -83,11 +118,13 @@ wss.on('connection', (ws) => {
                 tvConnections.set(incomingTvId, ws);
                 console.log(`TV connection opened: ${incomingTvId}`);
 
+                // Check if TV is registered before updating status
                 const tvDoc = await getTvById(incomingTvId);
                 if (tvDoc) {
                     const socketId = `ws-${Date.now()}`;
-                    await setTvOnlineStatus(incomingTvId, true, socketId);
-                    console.log(`TV is registered. Set status to online: ${incomingTvId}`);
+                    // Call the API to update status instead of directly calling the database
+                    await updateTvOnlineStatus(incomingTvId, true, socketId);
+                    console.log(`TV is registered. Sent API call to set status to online: ${incomingTvId}`);
                 } else {
                     console.log(`TV is not registered in Firestore. Skipping online status update for: ${incomingTvId}`);
                 }
@@ -107,10 +144,8 @@ wss.on('connection', (ws) => {
             console.log(`Client disconnected: ${tvId}`);
             if (tvConnections.get(tvId) === ws) {
                 tvConnections.delete(tvId);
-                const tvDoc = await getTvById(tvId);
-                if (tvDoc) {
-                    await setTvOnlineStatus(tvId, false, null);
-                }
+                 // Call the API to update status to offline
+                await updateTvOnlineStatus(tvId, false, null);
             }
         } else {
             console.log('An unregistered client disconnected');

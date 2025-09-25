@@ -63,6 +63,7 @@ export async function updateGroupPlaylistAction(groupId: string, playlistId: str
         await data.updateGroup(groupId, { playlistId });
         notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`, 'page');
+        revalidatePath('/groups');
         return { success: true, message: 'Group playlist updated.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update playlist.'
@@ -166,10 +167,15 @@ export async function removeFromGroupAction(tvId: string) {
 }
 
 
-export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
+export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean, socketId: string | null) {
     try {
-        await data.setTvOnlineStatus(tvId, isOnline, null); // Let the websocket server handle the socketId
-        revalidatePath('/', 'layout');
+        await data.setTvOnlineStatus(tvId, isOnline, socketId);
+        
+        // Revalidate all paths where online status is visible
+        revalidatePath('/');
+        revalidatePath('/dashboard');
+        revalidatePath('/tvs');
+        revalidatePath('/groups', 'layout'); // Revalidates /groups, /groups/[id] etc.
         
         return { success: true, message: `TV status updated.` };
     } catch (error) {
@@ -291,8 +297,11 @@ export async function deleteAdAction(adId: string) {
 
 export async function createPlaylistAction(name: string) {
     try {
-        await data.createPlaylist(name);
+        const playlist = await data.createPlaylist(name);
         revalidatePath('/playlists');
+        if (playlist) {
+             revalidatePath(`/playlists/${playlist.id}`);
+        }
         revalidatePath('/groups', 'layout');
         return { success: true, message: `Playlist "${name}" created.` };
     } catch (error) {
