@@ -1,8 +1,8 @@
 'server-only';
 import { db } from '@/lib/firebase';
-import type { TV, Group, Ad, Playlist, PriorityStream, AdPlay, AdPerformanceData, AnalyticsSettings } from '@/lib/definitions';
+import type { TV, Group, Ad, Playlist, PriorityStream, AdPlay, AdPerformanceData, AnalyticsSettings, AdPerformanceDataPeriod } from '@/lib/definitions';
 import { FieldValue } from 'firebase-admin/firestore';
-
+import { startOfDay, startOfWeek, startOfMonth, startOfYear, endOfDay, endOfWeek, endOfMonth, endOfYear } from 'date-fns';
 
 // --- GETTERS ---
 
@@ -94,9 +94,16 @@ export const deleteTv = async (tvId: string): Promise<boolean> => {
 export const setTvOnlineStatus = async (tvId: string, isOnline: boolean, socketId: string | null): Promise<TV | undefined> => {
     if (!db) return undefined;
     const docRef = db.collection("tvs").doc(tvId);
-    await docRef.update({ socketId });
+    // Check if the document exists before trying to update it
     const docSnap = await docRef.get();
-    return docSnap.data() as TV;
+    if (!docSnap.exists) {
+        console.log(`TV ${tvId} not found in database, skipping status update.`);
+        return undefined;
+    }
+    await docRef.update({ socketId });
+    // Re-fetch the document to return the updated state
+    const updatedDocSnap = await docRef.get();
+    return updatedDocSnap.data() as TV;
 };
 
 // Group Mutations
@@ -260,10 +267,38 @@ export const createAdPlay = async (adId: string, tvId: string, duration: number)
     await db.collection('adPlays').doc(playId).set(adPlay);
 };
 
-export const getAdPerformance = async (): Promise<AdPerformanceData[]> => {
+export const getAdPerformance = async (period: AdPerformanceDataPeriod = 'all'): Promise<AdPerformanceData[]> => {
     if (!db) return [];
 
-    const adPlaysSnapshot = await db.collection('adPlays').get();
+    const now = new Date();
+    let startTimestamp = 0;
+    
+    switch (period) {
+        case 'today':
+            startTimestamp = startOfDay(now).getTime();
+            break;
+        case 'week':
+            startTimestamp = startOfWeek(now, { weekStartsOn: 1 }).getTime(); // Monday as start of week
+            break;
+        case 'month':
+            startTimestamp = startOfMonth(now).getTime();
+            break;
+        case 'year':
+            startTimestamp = startOfYear(now).getTime();
+            break;
+        case 'all':
+        default:
+            startTimestamp = 0;
+            break;
+    }
+
+    let query = db.collection('adPlays');
+    if (period !== 'all') {
+        query = query.where('playedAt', '>=', startTimestamp) as any;
+    }
+    
+    const adPlaysSnapshot = await query.get();
+
     if (adPlaysSnapshot.empty) return [];
 
     const allAds = await getAds();

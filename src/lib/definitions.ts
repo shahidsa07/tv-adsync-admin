@@ -40,6 +40,8 @@ export interface AdPlay {
     duration: number;
 }
 
+export type AdPerformanceDataPeriod = 'today' | 'week' | 'month' | 'year' | 'all';
+
 export interface AdPerformanceData {
     adId: string;
     adName: string;

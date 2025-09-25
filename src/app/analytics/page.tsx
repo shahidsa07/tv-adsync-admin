@@ -4,11 +4,17 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { getAdPerformance, getAnalyticsSettings } from '@/lib/data';
 import { AdAnalyticsClient } from '@/components/ad-analytics-client';
+import type { AdPerformanceDataPeriod } from '@/lib/definitions';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AnalyticsPage() {
-  const performanceData = await getAdPerformance();
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: { filter?: AdPerformanceDataPeriod };
+}) {
+  const filter = searchParams.filter ?? 'all';
+  const performanceData = await getAdPerformance(filter);
   const settings = await getAnalyticsSettings();
 
   return (
@@ -23,7 +29,11 @@ export default async function AnalyticsPage() {
             </Link>
           </Button>
         </div>
-        <AdAnalyticsClient initialPerformanceData={performanceData} initialSettings={settings} />
+        <AdAnalyticsClient
+          initialPerformanceData={performanceData}
+          initialSettings={settings}
+          currentFilter={filter}
+        />
       </main>
     </div>
   );
