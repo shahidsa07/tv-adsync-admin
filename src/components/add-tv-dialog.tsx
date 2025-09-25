@@ -26,13 +26,15 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const [isCameraEnabled, setIsCameraEnabled] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
-  const { ref: videoRef } = useZxing({
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  const { ref } = useZxing({
+    videoRef,
     paused: !isCameraEnabled,
     onResult(result) {
       const id = result.getText();
       setTvId(id);
       toast({ title: 'QR Code Scanned', description: `TV ID set to ${id}` });
-      setIsCameraEnabled(false);
       stopCamera();
     },
     onError(error) {
@@ -40,11 +42,63 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
             // Ignore format errors which happen frequently during scanning
             if (error.name !== 'FormatException' && error.name !== 'NotFoundException') {
                  console.error('Zxing Error:', error);
-                 // You might want to add a toast for more serious errors, but be careful not to spam the user.
             }
         }
     }
   });
+
+  const stopCamera = useCallback(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+        videoRef.current.srcObject = null;
+    }
+    setIsCameraEnabled(false);
+  }, []);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value !== 'qr') {
+      stopCamera();
+    }
+  }
+
+  const handleDialogClose = (isOpen: boolean) => {
+    if (!isOpen) {
+        stopCamera();
+        setActiveTab("manual");
+        setHasCameraPermission(null);
+    }
+    onOpenChange(isOpen);
+  }
+
+  const handleEnableCamera = async () => {
+    if (typeof window !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+          }
+          setHasCameraPermission(true);
+          setIsCameraEnabled(true);
+      } catch (error) {
+          console.error("Camera permission error:", error);
+          setHasCameraPermission(false);
+          toast({ variant: 'destructive', title: 'Camera Access Denied', description: 'Please enable camera permissions in your browser settings.' });
+      }
+    } else {
+        setHasCameraPermission(false);
+        toast({ variant: 'destructive', title: 'Error', description: 'Camera access is not supported on this device or browser.'});
+    }
+  }
+
+  useEffect(() => {
+    // Final cleanup to ensure camera is off when dialog unmounts
+    return () => {
+        stopCamera();
+    }
+  }, [stopCamera]);
+
 
   const handleRegister = (id: string, name: string) => {
     if (!id || !id.trim()) {
@@ -61,7 +115,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
         toast({ title: 'Success', description: result.message });
         setTvId('');
         setTvName('');
-        onOpenChange(false);
+        onOpenChange(false); // This will trigger handleDialogClose and stop the camera
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
       }
@@ -73,58 +127,6 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     handleRegister(tvId, tvName);
   };
   
-  const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
-    }
-    setIsCameraEnabled(false);
-  }, [videoRef]);
-
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (value !== 'qr') {
-      stopCamera();
-    }
-  }
-  
-  const handleDialogClose = (isOpen: boolean) => {
-    if (!isOpen) {
-        stopCamera();
-        setActiveTab("manual");
-        setHasCameraPermission(null);
-    }
-    onOpenChange(isOpen);
-  }
-
-  const handleEnableCamera = async () => {
-    if (typeof window !== 'undefined' && navigator.mediaDevices) {
-      try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-          }
-          setHasCameraPermission(true);
-          setIsCameraEnabled(true);
-      } catch (error) {
-          console.error("Camera permission error:", error);
-          setHasCameraPermission(false);
-          toast({ variant: 'destructive', title: 'Camera Access Denied', description: 'Please enable camera permissions in your browser settings.' });
-      }
-    } else {
-        toast({ variant: 'destructive', title: 'Error', description: 'Camera access is not supported in this environment.'});
-    }
-  }
-
-  useEffect(() => {
-    // Cleanup function to stop camera when dialog is closed/unmounted
-    return () => {
-        stopCamera();
-    }
-  }, [stopCamera]);
-
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-md">
@@ -243,3 +245,5 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     </Dialog>
   );
 }
+
+    
