@@ -1,11 +1,11 @@
 "use client";
 
-import type { Group, TV, Playlist } from "@/lib/definitions";
+import type { Group, TV, Playlist, PriorityStream } from "@/lib/definitions";
 import { useState, useTransition } from "react";
 import { Button } from "./ui/button";
-import { Users, Clapperboard, MonitorPlay, Loader2, RefreshCw } from 'lucide-react';
+import { Users, Clapperboard, MonitorPlay, Loader2 } from 'lucide-react';
 import { ManageGroupTvsDialog } from "./manage-group-tvs-dialog";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "./ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { PriorityStreamManager } from "./priority-stream-manager";
 import { TvCard } from "./tv-card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
@@ -44,6 +44,10 @@ export function GroupDetailsClient({ initialGroup, allTvs, allPlaylists }: Group
         });
     }
 
+    const handleStreamChange = (stream: PriorityStream | null) => {
+        setGroup(prev => ({ ...prev, priorityStream: stream }));
+    }
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
@@ -63,7 +67,7 @@ export function GroupDetailsClient({ initialGroup, allTvs, allPlaylists }: Group
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <PriorityStreamManager group={group} />
+                            <PriorityStreamManager group={group} onStreamChange={handleStreamChange} />
                         </CardContent>
                     </Card>
 

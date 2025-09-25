@@ -9,14 +9,14 @@ import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { PlayCircle, StopCircle, Youtube, Video, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { startPriorityStreamAction, stopPriorityStreamAction } from "@/lib/actions";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
 
 interface PriorityStreamManagerProps {
     group: Group;
+    onStreamChange: (stream: PriorityStream | null) => void;
 }
 
-export function PriorityStreamManager({ group }: PriorityStreamManagerProps) {
+export function PriorityStreamManager({ group, onStreamChange }: PriorityStreamManagerProps) {
     const [stream, setStream] = useState<PriorityStream>({ type: 'youtube', url: '' });
     const [isStarting, startStartingTransition] = useTransition();
     const [isStopping, startStoppingTransition] = useTransition();
@@ -31,6 +31,8 @@ export function PriorityStreamManager({ group }: PriorityStreamManagerProps) {
             const result = await startPriorityStreamAction(group.id, stream);
             if (result.success) {
                 toast({ title: 'Success', description: result.message });
+                onStreamChange(stream);
+                setStream({ type: 'youtube', url: '' }); // Clear input form
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.message });
             }
@@ -42,6 +44,7 @@ export function PriorityStreamManager({ group }: PriorityStreamManagerProps) {
             const result = await stopPriorityStreamAction(group.id);
             if (result.success) {
                 toast({ title: 'Success', description: result.message });
+                onStreamChange(null);
             } else {
                 toast({ variant: 'destructive', title: 'Error', description: result.message });
             }
