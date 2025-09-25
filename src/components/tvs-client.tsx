@@ -13,7 +13,7 @@ interface TvsClientProps {
   initialGroups: Group[];
 }
 
-type FilterType = "all" | "assigned" | "unassigned";
+type FilterType = "all" | "assigned" | "unassigned" | "online" | "offline";
 
 export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
   const [filter, setFilter] = useState<FilterType>("all");
@@ -22,13 +22,19 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
   useWebSocket();
 
   const filteredTvs = useMemo(() => {
-    if (filter === "assigned") {
-      return initialTvs.filter((tv) => !!tv.groupId);
+    switch (filter) {
+      case "assigned":
+        return initialTvs.filter((tv) => !!tv.groupId);
+      case "unassigned":
+        return initialTvs.filter((tv) => !tv.groupId);
+      case "online":
+        return initialTvs.filter((tv) => !!tv.socketId);
+      case "offline":
+        return initialTvs.filter((tv) => !tv.socketId);
+      case "all":
+      default:
+        return initialTvs;
     }
-    if (filter === "unassigned") {
-      return initialTvs.filter((tv) => !tv.groupId);
-    }
-    return initialTvs;
   }, [initialTvs, filter]);
 
   return (
@@ -41,7 +47,7 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
           </p>
         </div>
         <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 rounded-lg bg-muted p-1">
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted p-1">
                 <Button
                     variant={filter === "all" ? "default" : "ghost"}
                     size="sm"
@@ -65,6 +71,22 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
                     className="flex-1 justify-center"
                 >
                     Unassigned
+                </Button>
+                 <Button
+                    variant={filter === "online" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setFilter("online")}
+                    className="flex-1 justify-center"
+                >
+                    Online
+                </Button>
+                 <Button
+                    variant={filter === "offline" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setFilter("offline")}
+                    className="flex-1 justify-center"
+                >
+                    Offline
                 </Button>
             </div>
              <Button variant="outline" onClick={() => setShowAddTvDialog(true)}>
