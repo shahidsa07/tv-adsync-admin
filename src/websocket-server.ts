@@ -49,7 +49,7 @@ const setupNotificationWatcher = async () => {
                 // Clean up the notification file
                 await fs.unlink(filePath);
 
-            } catch (error) => {
+            } catch (error) {
                 console.error(`Error processing notification file ${filePath}:`, error);
             }
         });
