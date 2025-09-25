@@ -3,7 +3,7 @@ import { config } from 'dotenv';
 config(); // Load environment variables from .env file
 
 import { WebSocketServer, WebSocket } from 'ws';
-import { setTvOnlineStatus, getTvsByGroupId } from './lib/data';
+import { getTvById, setTvOnlineStatus, getTvsByGroupId } from './lib/data';
 import chokidar from 'chokidar';
 import fs from 'fs/promises';
 import path from 'path';
@@ -72,42 +72,45 @@ wss.on('connection', (ws) => {
             const data = JSON.parse(message.toString());
 
             if (data.type === 'register' && data.payload?.tvId) {
-                tvId = data.payload.tvId;
+                const incomingTvId = data.payload.tvId;
+                tvId = incomingTvId;
                 
-                // If there's an old connection for this TV, terminate it.
-                if (tvConnections.has(tvId)) {
-                    console.log(`Terminating old connection for ${tvId}`);
-                    tvConnections.get(tvId)?.terminate();
+                if (tvConnections.has(incomingTvId)) {
+                    console.log(`Terminating old connection for ${incomingTvId}`);
+                    tvConnections.get(incomingTvId)?.terminate();
                 }
 
-                // Store the new connection
-                tvConnections.set(tvId, ws);
-                console.log(`TV registered: ${tvId}`);
+                tvConnections.set(incomingTvId, ws);
+                console.log(`TV connection opened: ${incomingTvId}`);
 
-                // Update Firestore with the new online status and socket ID
-                // The socket ID can be a simple unique identifier for this session.
-                const socketId = `ws-${Date.now()}`;
-                await setTvOnlineStatus(tvId, true, socketId);
+                const tvDoc = await getTvById(incomingTvId);
+                if (tvDoc) {
+                    const socketId = `ws-${Date.now()}`;
+                    await setTvOnlineStatus(incomingTvId, true, socketId);
+                    console.log(`TV is registered. Set status to online: ${incomingTvId}`);
+                } else {
+                    console.log(`TV is not registered in Firestore. Skipping online status update for: ${incomingTvId}`);
+                }
 
-                // Acknowledge registration
-                ws.send(JSON.stringify({ type: 'registered', tvId }));
+                ws.send(JSON.stringify({ type: 'registered', tvId: incomingTvId }));
 
             } else {
                 console.log('Received unknown message type:', data.type);
             }
         } catch (error) {
-            console.error('Failed to process message:', message.toString(), error);
+            console.error(`Failed to process message: ${message.toString()}`, error);
         }
     });
 
     ws.on('close', async () => {
         if (tvId) {
             console.log(`Client disconnected: ${tvId}`);
-            // Only remove the connection if it's the current one for this tvId
             if (tvConnections.get(tvId) === ws) {
                 tvConnections.delete(tvId);
-                // Update Firestore to show the TV as offline
-                await setTvOnlineStatus(tvId, false, null);
+                const tvDoc = await getTvById(tvId);
+                if (tvDoc) {
+                    await setTvOnlineStatus(tvId, false, null);
+                }
             }
         } else {
             console.log('An unregistered client disconnected');
