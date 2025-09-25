@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef } from 'react';
+import { useState, useTransition, useEffect, useRef, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -24,12 +24,10 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manual");
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | undefined>(undefined);
-  const [isPaused, setIsPaused] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  
   const { ref } = useZxing({
-    paused: isPaused || activeTab !== 'qr' || !open,
+    paused: activeTab !== 'qr' || !open,
     onResult(result) {
       if (!isPending) {
         const id = result.getText();
@@ -39,31 +37,35 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
       }
     },
     onDecodeError(error) {
-      if (error) {
+      // Don't toast on every minor decode error
+      if (error && !(error instanceof DOMException)) {
         console.info(error);
       }
     },
   });
 
-  useEffect(() => {
-    // Manually assign the ref to both refs.
-    if (ref) {
-      ref.current = videoRef.current;
+  const stopCamera = useCallback(() => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
     }
-  }, [ref]);
-
+  }, [stream]);
 
   useEffect(() => {
+    let isMounted = true;
+    
     if (activeTab === 'qr' && open) {
-      setIsPaused(false);
       const getCameraPermission = async () => {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
+            const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            if (isMounted) {
+              setStream(newStream);
+              setHasCameraPermission(true);
+            } else {
+              newStream.getTracks().forEach(track => track.stop());
             }
-            setHasCameraPermission(true);
         } catch (error) {
+            if (!isMounted) return;
             console.error('Error accessing camera:', error);
             setHasCameraPermission(false);
             if (error instanceof DOMException && error.name === 'NotAllowedError') {
@@ -77,10 +79,20 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
       };
       getCameraPermission();
     } else {
-      setIsPaused(true);
+      stopCamera();
     }
-  }, [activeTab, open, toast]);
-
+    
+    return () => {
+      isMounted = false;
+      stopCamera();
+    };
+  }, [activeTab, open, toast, stopCamera]);
+  
+  useEffect(() => {
+    if (ref.current && stream) {
+      ref.current.srcObject = stream;
+    }
+  }, [stream, ref]);
 
   const handleRegister = (id: string, name: string) => {
     if (!id || !id.trim()) {
@@ -113,15 +125,21 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     setTvId('');
     setTvName('');
     setActiveTab(value);
+    if (value !== 'qr') {
+      stopCamera();
+    }
+  }
+  
+  const handleDialogClose = (isOpen: boolean) => {
+    onOpenChange(isOpen);
+    if (!isOpen) {
+        stopCamera();
+        handleTabChange("manual");
+    }
   }
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-        onOpenChange(isOpen);
-        if (!isOpen) {
-            handleTabChange("manual");
-        }
-    }}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="font-headline">Add a New TV</DialogTitle>
@@ -170,7 +188,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
             </TabsContent>
             <TabsContent value="qr" className="pt-4">
               <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted mb-4">
-                <video ref={videoRef} className="w-full h-full object-cover" />
+                <video ref={ref} className="w-full h-full object-cover" autoPlay playsInline />
                 {hasCameraPermission === false && (
                     <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
                         <VideoOff className="mb-4 h-12 w-12 text-muted-foreground" />
