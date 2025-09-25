@@ -1,3 +1,4 @@
+
 "use client";
 
 import type { Group, TV, Playlist, PriorityStream } from "@/lib/definitions";
@@ -14,6 +15,7 @@ import { updateGroupPlaylistAction } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { ScrollArea } from "./ui/scroll-area";
 
 interface GroupDetailsClientProps {
     initialGroup: Group;
@@ -120,19 +122,21 @@ export function GroupDetailsClient({ initialGroup, allTvs, allPlaylists }: Group
                     </Card>
                 </div>
                 
-                <div className="lg:col-span-2">
-                    <h2 className="text-2xl font-headline font-semibold mb-4">Assigned TVs ({assignedTvs.length})</h2>
-                    {assignedTvs.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            {assignedTvs.map(tv => (
-                                <TvCard key={tv.tvId} tv={tv} groups={[group]} showRemoveFromGroup={true} />
-                            ))}
-                        </div>
-                    ) : (
-                         <div className="text-center py-10 border-2 border-dashed rounded-lg">
-                            <p className="text-muted-foreground">No TVs assigned to this group.</p>
-                        </div>
-                    )}
+                <div className="lg:col-span-2 space-y-4">
+                    <h2 className="text-2xl font-headline font-semibold">Assigned TVs ({assignedTvs.length})</h2>
+                    <ScrollArea className="h-[calc(100vh-18rem)] pr-4">
+                        {assignedTvs.length > 0 ? (
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                                {assignedTvs.map(tv => (
+                                    <TvCard key={tv.tvId} tv={tv} groups={[group]} showRemoveFromGroup={true} />
+                                ))}
+                            </div>
+                        ) : (
+                             <div className="text-center py-10 border-2 border-dashed rounded-lg h-full flex items-center justify-center">
+                                <p className="text-muted-foreground">No TVs assigned to this group.</p>
+                            </div>
+                        )}
+                    </ScrollArea>
                 </div>
             </div>
 
