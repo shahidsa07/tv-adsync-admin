@@ -26,10 +26,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const [isCameraEnabled, setIsCameraEnabled] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const { ref } = useZxing({
-    videoRef,
+  const { ref: zxingRef } = useZxing({
     paused: !isCameraEnabled,
     onResult(result) {
       const id = result.getText();
@@ -39,7 +36,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     },
     onError(error) {
         if (error && isCameraEnabled) {
-            // Ignore format errors which happen frequently during scanning
+            // Ignore format/not found errors which happen frequently during scanning
             if (error.name !== 'FormatException' && error.name !== 'NotFoundException') {
                  console.error('Zxing Error:', error);
             }
@@ -48,13 +45,13 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   });
 
   const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
+    if (zxingRef.current && zxingRef.current.srcObject) {
+        const stream = zxingRef.current.srcObject as MediaStream;
         stream.getTracks().forEach(track => track.stop());
-        videoRef.current.srcObject = null;
+        zxingRef.current.srcObject = null;
     }
     setIsCameraEnabled(false);
-  }, []);
+  }, [zxingRef]);
 
   const handleTabChange = (value: string) => {
     setActiveTab(value);
@@ -76,8 +73,8 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     if (typeof window !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
       try {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (videoRef.current) {
-              videoRef.current.srcObject = stream;
+          if (zxingRef.current) {
+              zxingRef.current.srcObject = stream;
           }
           setHasCameraPermission(true);
           setIsCameraEnabled(true);
@@ -177,7 +174,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
             </TabsContent>
             <TabsContent value="qr" className="pt-4">
               <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted mb-4">
-                  <video ref={videoRef} className={`w-full h-full object-cover ${isCameraEnabled ? '' : 'hidden'}`} autoPlay muted playsInline />
+                  <video ref={zxingRef} className={`w-full h-full object-cover ${isCameraEnabled ? '' : 'hidden'}`} autoPlay muted playsInline />
                   {!isCameraEnabled && (
                      <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
                         {hasCameraPermission === false ? (
@@ -245,5 +242,3 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     </Dialog>
   );
 }
-
-    
