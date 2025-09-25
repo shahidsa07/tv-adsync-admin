@@ -171,7 +171,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
             </TabsContent>
             <TabsContent value="qr" className="pt-4">
               <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted mb-4">
-                  <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                  <video ref={videoRef} className={`w-full h-full object-cover ${isCameraEnabled ? '' : 'hidden'}`} autoPlay muted playsInline />
                   {!isCameraEnabled && (
                      <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
                         {hasCameraPermission === false ? (
