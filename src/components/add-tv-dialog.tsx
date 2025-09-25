@@ -16,21 +16,27 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 const qrcodeRegionId = "html5qr-code-full-region";
 
 const Html5QrcodePlugin = ({ onScanSuccess, onScanFailure }: { onScanSuccess: (decodedText: string) => void, onScanFailure: (error: string) => void }) => {
-    useEffect(() => {
-        const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            rememberLastUsedCamera: true,
-        };
-        const html5QrcodeScanner = new Html5QrcodeScanner(qrcodeRegionId, config, false);
-        
-        html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
-        // cleanup function when component will unmount
+    useEffect(() => {
+        if (!scannerRef.current) {
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                rememberLastUsedCamera: true,
+            };
+            const html5QrcodeScanner = new Html5QrcodeScanner(qrcodeRegionId, config, false);
+            scannerRef.current = html5QrcodeScanner;
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
         return () => {
-            html5QrcodeScanner.clear().catch(error => {
-                console.error("Failed to clear html5QrcodeScanner. ", error);
-            });
+            if (scannerRef.current) {
+                scannerRef.current.clear().catch(error => {
+                    console.error("Failed to clear html5QrcodeScanner.", error);
+                });
+                scannerRef.current = null;
+            }
         };
     }, [onScanSuccess, onScanFailure]);
 
