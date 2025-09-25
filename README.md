@@ -1,4 +1,4 @@
-# SignageWise - Digital Signage Management
+# NextAds - Digital Signage Management
 
 This is a Next.js application for managing digital signage content, built with Firebase and Genkit.
 
@@ -65,4 +65,4 @@ Once both servers are running, open your web browser and navigate to:
 
 [http://localhost:9002](http://localhost:9002)
 
-You should see the SignageWise dashboard. The initial data (TVs, groups, ads) will be seeded into your Firestore database the first time you visit one of the main pages.
+You should see the NextAds dashboard. The initial data (TVs, groups, ads) will be seeded into your Firestore database the first time you visit one of the main pages.

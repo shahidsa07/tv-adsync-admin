@@ -7,7 +7,7 @@ export function Header() {
         <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Monitor className="h-6 w-6" />
         </div>
-        <h1 className="text-2xl font-bold font-headline text-foreground">SignageWise</h1>
+        <h1 className="text-2xl font-bold font-headline text-foreground">NextAds</h1>
       </div>
     </header>
   );

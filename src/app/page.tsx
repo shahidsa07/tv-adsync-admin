@@ -36,7 +36,7 @@ export default function Home() {
       <Header />
       <main className="flex-1 p-4 sm:p-6 md:p-8">
         <div className="mb-8">
-            <h1 className="text-3xl font-bold font-headline">Welcome to SignageWise</h1>
+            <h1 className="text-3xl font-bold font-headline">Welcome to NextAds</h1>
             <p className="text-muted-foreground">Select a feature below to get started.</p>
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">

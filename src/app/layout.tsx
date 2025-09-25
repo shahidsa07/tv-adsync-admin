@@ -3,7 +3,7 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: 'SignageWise',
+  title: 'NextAds',
   description: 'Digital Signage Management',
 };
 
