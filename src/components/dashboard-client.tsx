@@ -6,6 +6,8 @@ import { TvCard } from './tv-card';
 import { Button } from './ui/button';
 import { PlusCircle } from 'lucide-react';
 import { AddTvDialog } from './add-tv-dialog';
+import { useWebSocket } from '@/hooks/use-websocket';
+import { useRouter } from 'next/navigation';
 
 interface DashboardClientProps {
   initialTvs: TV[];
@@ -16,6 +18,17 @@ export function DashboardClient({ initialTvs, initialGroups }: DashboardClientPr
   const [tvs] = useState(initialTvs);
   const [groups] = useState(initialGroups);
   const [showAddTvDialog, setShowAddTvDialog] = useState(false);
+  const router = useRouter();
+
+  useWebSocket({
+    onMessage: (event) => {
+      if (event.type === 'tv-status-changed') {
+        console.log('TV status changed, refreshing data...');
+        router.refresh();
+      }
+    }
+  });
+
 
   const unassignedTvs = tvs.filter(tv => !tv.groupId);
 

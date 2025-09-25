@@ -13,6 +13,9 @@ import { Label } from "./ui/label";
 import { updateGroupPlaylistAction } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
+import { useWebSocket } from "@/hooks/use-websocket";
+import { useRouter } from "next/navigation";
+
 
 interface GroupDetailsClientProps {
     initialGroup: Group;
@@ -26,6 +29,16 @@ export function GroupDetailsClient({ initialGroup, allTvs, allPlaylists }: Group
     const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(group.playlistId ?? null);
     const [isPlaylistPending, startPlaylistTransition] = useTransition();
     const { toast } = useToast();
+    const router = useRouter();
+
+    useWebSocket({
+      onMessage: (event) => {
+        if (event.type === 'tv-status-changed') {
+          console.log('TV status changed, refreshing data...');
+          router.refresh();
+        }
+      }
+    });
 
     const assignedTvs = allTvs.filter(tv => tv.groupId === group.id);
     const currentPlaylist = allPlaylists.find(p => p.id === group.playlistId);

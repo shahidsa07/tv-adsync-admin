@@ -13,6 +13,7 @@ const wss = new WebSocketServer({ port: PORT });
 
 // In-memory mapping of tvId to WebSocket connection
 const tvConnections = new Map<string, WebSocket>();
+const adminConnections = new Set<WebSocket>();
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
 // The URL for the internal API route in the Next.js app
@@ -40,10 +41,10 @@ const setupNotificationWatcher = async () => {
                 console.log('Processing notification:', notification);
                 
                 if (notification.type === 'tv') {
-                    sendRefresh(notification.id);
+                    sendRefreshToTv(notification.id);
                 } else if (notification.type === 'group') {
                     const tvs = await getTvsByGroupId(notification.id);
-                    tvs.forEach(tv => sendRefresh(tv.tvId));
+                    tvs.forEach(tv => sendRefreshToTv(tv.tvId));
                 }
 
                 // Clean up the notification file
@@ -62,7 +63,7 @@ const setupNotificationWatcher = async () => {
 /**
  * Notifies the Next.js app to update the TV's online status.
  */
-const updateTvOnlineStatus = async (tvId: string, isOnline: boolean, socketId: string | null) => {
+const updateTvOnlineStatusInApi = async (tvId: string, isOnline: boolean, socketId: string | null) => {
     try {
         console.log(`Notifying Next.js to update status for ${tvId} to ${isOnline ? 'online' : 'offline'}`);
         const response = await fetch(TV_STATUS_API_ENDPOINT, {
@@ -81,6 +82,9 @@ const updateTvOnlineStatus = async (tvId: string, isOnline: boolean, socketId: s
 
         const result = await response.json();
         console.log(`Successfully notified Next.js for ${tvId}:`, result.message);
+        
+        // After successful API update, notify admin clients
+        broadcastToAdmins({ type: 'tv-status-changed', payload: { tvId, isOnline } });
 
     } catch (error) {
         console.error(`Failed to update TV online status via API for ${tvId}:`, error);
@@ -88,7 +92,7 @@ const updateTvOnlineStatus = async (tvId: string, isOnline: boolean, socketId: s
 };
 
 
-const sendRefresh = (tvId: string) => {
+const sendRefreshToTv = (tvId: string) => {
     const ws = tvConnections.get(tvId);
     if (ws && ws.readyState === WebSocket.OPEN) {
         console.log(`Sending REFRESH_STATE to ${tvId}`);
@@ -98,15 +102,25 @@ const sendRefresh = (tvId: string) => {
     }
 };
 
+const broadcastToAdmins = (message: object) => {
+    console.log(`Broadcasting to ${adminConnections.size} admin clients:`, message);
+    adminConnections.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify(message));
+        }
+    });
+}
+
 wss.on('connection', (ws) => {
-    console.log('Client connected');
-    let tvId: string | null = null; // Keep track of the tvId for this connection
+    let tvId: string | null = null;
+    let clientType: 'tv' | 'admin' | null = null;
 
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message.toString());
 
-            if (data.type === 'register' && data.payload?.tvId) {
+            if (data.type === 'register-tv' && data.payload?.tvId) {
+                clientType = 'tv';
                 const incomingTvId = data.payload.tvId;
                 tvId = incomingTvId;
                 
@@ -118,20 +132,22 @@ wss.on('connection', (ws) => {
                 tvConnections.set(incomingTvId, ws);
                 console.log(`TV connection opened: ${incomingTvId}`);
 
-                // Check if TV is registered before updating status
                 const tvDoc = await getTvById(incomingTvId);
                 if (tvDoc) {
                     const socketId = `ws-${Date.now()}`;
-                    // Call the API to update status instead of directly calling the database
-                    await updateTvOnlineStatus(incomingTvId, true, socketId);
-                    console.log(`TV is registered. Sent API call to set status to online: ${incomingTvId}`);
+                    await updateTvOnlineStatusInApi(incomingTvId, true, socketId);
                 } else {
-                    console.log(`TV is not registered in Firestore. Skipping online status update for: ${incomingTvId}`);
+                    console.log(`TV is not registered. Skipping online status update for: ${incomingTvId}`);
                 }
-
                 ws.send(JSON.stringify({ type: 'registered', tvId: incomingTvId }));
 
-            } else {
+            } else if (data.type === 'register-admin') {
+                clientType = 'admin';
+                adminConnections.add(ws);
+                console.log(`Admin client connected. Total admins: ${adminConnections.size}`);
+                ws.send(JSON.stringify({ type: 'admin-registered' }));
+            }
+             else {
                 console.log('Received unknown message type:', data.type);
             }
         } catch (error) {
@@ -140,13 +156,15 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', async () => {
-        if (tvId) {
-            console.log(`Client disconnected: ${tvId}`);
+        if (clientType === 'tv' && tvId) {
+            console.log(`TV client disconnected: ${tvId}`);
             if (tvConnections.get(tvId) === ws) {
                 tvConnections.delete(tvId);
-                 // Call the API to update status to offline
-                await updateTvOnlineStatus(tvId, false, null);
+                await updateTvOnlineStatusInApi(tvId, false, null);
             }
+        } else if (clientType === 'admin') {
+            adminConnections.delete(ws);
+            console.log(`Admin client disconnected. Total admins: ${adminConnections.size}`);
         } else {
             console.log('An unregistered client disconnected');
         }
