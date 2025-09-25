@@ -10,8 +10,40 @@ import { registerTvAction } from '@/lib/actions';
 import { Loader2, QrCode, Text, Video, Camera } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { useZxing } from 'react-zxing';
 import { ScrollArea } from './ui/scroll-area';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+
+const qrcodeRegionId = "html5qr-code-full-region";
+
+const Html5QrcodePlugin = ({ onScanSuccess }: { onScanSuccess: (decodedText: string) => void }) => {
+    useEffect(() => {
+        const html5QrcodeScanner = new Html5QrcodeScanner(
+            qrcodeRegionId,
+            { fps: 10, qrbox: 250, aspectRatio: 1.0 },
+            /* verbose= */ false
+        );
+
+        const handleSuccess = (decodedText: string, decodedResult: any) => {
+            onScanSuccess(decodedText);
+            html5QrcodeScanner.clear();
+        };
+
+        const handleError = (errorMessage: string) => {
+            // handle scan error, usually ignore
+        };
+
+        html5QrcodeScanner.render(handleSuccess, handleError);
+
+        return () => {
+            html5QrcodeScanner.clear().catch(error => {
+                console.error("Failed to clear html5QrcodeScanner. ", error);
+            });
+        };
+    }, [onScanSuccess]);
+
+    return <div id={qrcodeRegionId} />;
+};
+
 
 interface AddTvDialogProps {
   open: boolean;
@@ -24,79 +56,14 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manual");
-  const [isCameraEnabled, setIsCameraEnabled] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
 
-  const { ref: zxingRef } = useZxing({
-    paused: !isCameraEnabled,
-    onResult(result) {
-      const id = result.getText();
-      setTvId(id);
-      toast({ title: 'QR Code Scanned', description: `TV ID set to ${id}` });
-      stopCamera();
-    },
-    onError(error) {
-        if (error && isCameraEnabled) {
-            // Ignore format/not found errors which happen frequently during scanning
-            if (error.name !== 'FormatException' && error.name !== 'NotFoundException') {
-                 console.error('Zxing Error:', error);
-            }
-        }
-    }
-  });
-
-  const stopCamera = useCallback(() => {
-    if (zxingRef.current && zxingRef.current.srcObject) {
-        const stream = zxingRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
-        zxingRef.current.srcObject = null;
-    }
-    setIsCameraEnabled(false);
-  }, [zxingRef]);
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    if (value !== 'qr') {
-      stopCamera();
-    }
-  }
 
   const handleDialogClose = (isOpen: boolean) => {
     if (!isOpen) {
-        stopCamera();
         setActiveTab("manual");
-        setHasCameraPermission(null);
     }
     onOpenChange(isOpen);
   }
-
-  const handleEnableCamera = async () => {
-    if (typeof window !== 'undefined' && navigator.mediaDevices?.getUserMedia) {
-      try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (zxingRef.current) {
-              zxingRef.current.srcObject = stream;
-          }
-          setHasCameraPermission(true);
-          setIsCameraEnabled(true);
-      } catch (error) {
-          console.error("Camera permission error:", error);
-          setHasCameraPermission(false);
-          toast({ variant: 'destructive', title: 'Camera Access Denied', description: 'Please enable camera permissions in your browser settings.' });
-      }
-    } else {
-        setHasCameraPermission(false);
-        toast({ variant: 'destructive', title: 'Error', description: 'Camera access is not supported on this device or browser.'});
-    }
-  }
-
-  useEffect(() => {
-    // Final cleanup to ensure camera is off when dialog unmounts
-    return () => {
-        stopCamera();
-    }
-  }, [stopCamera]);
-
 
   const handleRegister = (id: string, name: string) => {
     if (!id || !id.trim()) {
@@ -113,7 +80,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
         toast({ title: 'Success', description: result.message });
         setTvId('');
         setTvName('');
-        onOpenChange(false); // This will trigger handleDialogClose and stop the camera
+        onOpenChange(false);
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
       }
@@ -123,6 +90,11 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     handleRegister(tvId, tvName);
+  };
+
+  const onScanSuccess = (decodedText: string) => {
+    setTvId(decodedText);
+    toast({ title: 'QR Code Scanned', description: `TV ID set to ${decodedText}` });
   };
   
   return (
@@ -136,7 +108,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
                 Register a new TV by entering its unique ID or scanning a QR code.
               </DialogDescription>
             </DialogHeader>
-            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full mt-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mt-4">
                 <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="manual"><Text className="mr-2" />Manual</TabsTrigger>
                     <TabsTrigger value="qr"><QrCode className="mr-2" />QR Code</TabsTrigger>
@@ -176,33 +148,8 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
                     </form>
                 </TabsContent>
                 <TabsContent value="qr" className="pt-4">
-                  <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted mb-4">
-                      <video ref={zxingRef} className={`w-full h-full object-cover ${isCameraEnabled ? '' : 'hidden'}`} autoPlay muted playsInline />
-                      {!isCameraEnabled && (
-                         <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
-                            {hasCameraPermission === false ? (
-                                <Alert variant="destructive" className='text-left'>
-                                    <Camera className="h-4 w-4" />
-                                    <AlertTitle>Camera Access Denied</AlertTitle>
-                                    <AlertDescription>
-                                        Please enable camera permissions in your browser settings to use this feature.
-                                    </AlertDescription>
-                                </Alert>
-                            ) : (
-                                <>
-                                    <Video className="mb-4 h-12 w-12 text-muted-foreground" />
-                                    <h3 className="font-semibold">Camera is off</h3>
-                                    <p className="text-sm text-muted-foreground mb-4">Click the button below to start scanning.</p>
-                                    <Button onClick={handleEnableCamera}>
-                                        <Camera className="mr-2" />
-                                        Enable Camera
-                                    </Button>
-                                </>
-                            )}
-                        </div>
-                      )}
-                  </div>
-                  <form onSubmit={handleSubmit} className="space-y-4">
+                  {activeTab === 'qr' && <Html5QrcodePlugin onScanSuccess={onScanSuccess} />}
+                  <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                     <Alert>
                         <QrCode className="h-4 w-4" />
                         <AlertTitle>Scan QR Code</AlertTitle>
