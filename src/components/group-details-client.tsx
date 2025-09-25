@@ -118,7 +118,7 @@ export function GroupDetailsClient({ initialGroup, allTvs, allPlaylists }: Group
                     {assignedTvs.length > 0 ? (
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             {assignedTvs.map(tv => (
-                                <TvCard key={tv.tvId} tv={tv} groups={[group]} />
+                                <TvCard key={tv.tvId} tv={tv} groups={[group]} showRemoveFromGroup={true} />
                             ))}
                         </div>
                     ) : (

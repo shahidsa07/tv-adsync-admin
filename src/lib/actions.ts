@@ -151,6 +151,21 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
   }
 }
 
+export async function removeFromGroupAction(tvId: string) {
+    try {
+        const tv = await data.getTvById(tvId);
+        if (tv?.groupId) {
+            await assignTvToGroupAction(tvId, null);
+            return { success: true, message: 'TV removed from group.' };
+        }
+        return { success: false, message: 'TV is not in a group.'};
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to remove TV from group.'
+        return { success: false, message };
+    }
+}
+
+
 export async function setTvOnlineAction(tvId: string, isOnline: boolean) {
     try {
         await data.setTvOnlineStatus(tvId, isOnline, null); // Let the websocket server handle the socketId
