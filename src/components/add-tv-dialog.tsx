@@ -24,20 +24,19 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manual");
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | undefined>(undefined);
-  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const { ref } = useZxing({
-    paused: activeTab !== 'qr' || !open,
+    paused: activeTab !== 'qr' || !open || !hasCameraPermission,
+    videoRef,
     onResult(result) {
       if (!isPending) {
         const id = result.getText();
         setTvId(id);
         toast({ title: 'QR Code Scanned', description: `TV ID: ${id}` });
-        // The user now needs to enter a name and submit.
       }
     },
     onDecodeError(error) {
-      // Don't toast on every minor decode error
       if (error && !(error instanceof DOMException)) {
         console.info(error);
       }
@@ -45,36 +44,37 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   });
 
   const stopCamera = useCallback(() => {
-    if (stream) {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
-      setStream(null);
+      videoRef.current.srcObject = null;
     }
-  }, [stream]);
+  }, [videoRef]);
 
   useEffect(() => {
     let isMounted = true;
-    
-    if (activeTab === 'qr' && open) {
+    if (open && activeTab === 'qr') {
       const getCameraPermission = async () => {
         try {
-            const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-            if (isMounted) {
-              setStream(newStream);
-              setHasCameraPermission(true);
-            } else {
-              newStream.getTracks().forEach(track => track.stop());
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          if (isMounted) {
+            setHasCameraPermission(true);
+            if (videoRef.current) {
+              videoRef.current.srcObject = stream;
             }
+          } else {
+            stream.getTracks().forEach(track => track.stop());
+          }
         } catch (error) {
-            if (!isMounted) return;
+          if (isMounted) {
             console.error('Error accessing camera:', error);
             setHasCameraPermission(false);
-            if (error instanceof DOMException && error.name === 'NotAllowedError') {
-              toast({
-                  variant: 'destructive',
-                  title: 'Camera Access Denied',
-                  description: 'Please enable camera permissions in your browser settings to use this feature.',
-              });
-            }
+            toast({
+              variant: 'destructive',
+              title: 'Camera Access Denied',
+              description: 'Please enable camera permissions in your browser settings to use this feature.',
+            });
+          }
         }
       };
       getCameraPermission();
@@ -86,13 +86,8 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
       isMounted = false;
       stopCamera();
     };
-  }, [activeTab, open, toast, stopCamera]);
-  
-  useEffect(() => {
-    if (ref.current && stream) {
-      ref.current.srcObject = stream;
-    }
-  }, [stream, ref]);
+  }, [open, activeTab, stopCamera, toast]);
+
 
   const handleRegister = (id: string, name: string) => {
     if (!id || !id.trim()) {
@@ -188,7 +183,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
             </TabsContent>
             <TabsContent value="qr" className="pt-4">
               <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted mb-4">
-                <video ref={ref} className="w-full h-full object-cover" autoPlay playsInline />
+                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
                 {hasCameraPermission === false && (
                     <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
                         <VideoOff className="mb-4 h-12 w-12 text-muted-foreground" />
