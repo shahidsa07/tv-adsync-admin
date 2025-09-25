@@ -84,8 +84,6 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
 
 
   const handleTabChange = (value: string) => {
-    setTvId('');
-    setTvName('');
     setActiveTab(value);
     if (value !== 'qr') {
       stopCamera();
