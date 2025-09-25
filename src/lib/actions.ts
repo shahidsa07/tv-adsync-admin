@@ -47,10 +47,7 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
         const allAffectedIds = new Set([...originalTvIds, ...tvIds]);
         allAffectedIds.forEach(tvId => notifyTv(tvId));
 
-        revalidatePath('/');
-        revalidatePath('/dashboard');
-        revalidatePath('/groups');
-        revalidatePath(`/groups/${groupId}`, 'page');
+        revalidatePath('/', 'layout');
         return { success: true, message: 'Group TVs updated.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update group TVs.'
@@ -99,9 +96,7 @@ export async function registerTvAction(tvId: string, name: string) {
         }
 
         await data.createTv(sanitizedTvId, name);
-        revalidatePath('/');
-        revalidatePath('/dashboard');
-        revalidatePath('/tvs');
+        revalidatePath('/', 'layout');
         return { success: true, message: `TV "${name}" registered successfully.` };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to register TV.'
@@ -113,10 +108,7 @@ export async function updateTvNameAction(tvId: string, name: string) {
   try {
     await data.updateTv(tvId, { name });
     notifyTv(tvId);
-    revalidatePath('/');
-    revalidatePath('/dashboard');
-    revalidatePath('/tvs');
-    revalidatePath('/groups', 'layout'); // Revalidate the groups layout to catch all potential pages
+    revalidatePath('/', 'layout');
     return { success: true, message: `TV name updated to "${name}".` }
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to update TV name."
@@ -169,17 +161,24 @@ export async function removeFromGroupAction(tvId: string) {
 
 export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean, socketId: string | null) {
     try {
+        const tv = await data.getTvById(tvId);
+        if (!tv) {
+            // This case is handled in websocket-server.ts, but as a safeguard:
+            console.log(`setTvOnlineStatusAction: TV with ID ${tvId} not found. Skipping update.`);
+            return { success: true, message: 'TV not found, no status updated.' };
+        }
+
         await data.setTvOnlineStatus(tvId, isOnline, socketId);
         
-        // Revalidate all paths where online status is visible
-        revalidatePath('/');
-        revalidatePath('/dashboard');
-        revalidatePath('/tvs');
-        revalidatePath('/groups', 'layout'); // Revalidates /groups, /groups/[id] etc.
+        // Revalidate all paths where online status is visible.
+        // Using `revalidatePath('/', 'layout')` is a broad but effective way to ensure all
+        // dependent pages get fresh data.
+        revalidatePath('/', 'layout');
         
         return { success: true, message: `TV status updated.` };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update TV status.'
+        console.error("Error in setTvOnlineStatusAction:", message);
         return { success: false, message };
     }
 }
