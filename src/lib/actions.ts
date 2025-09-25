@@ -96,6 +96,10 @@ export async function registerTvAction(tvId: string, name: string) {
         }
 
         await data.createTv(sanitizedTvId, name);
+        
+        // Notify the websocket server to update the status if the TV is already connected
+        notifyTv(sanitizedTvId);
+
         revalidatePath('/', 'layout');
         return { success: true, message: `TV "${name}" registered successfully.` };
     } catch (error) {

@@ -45,7 +45,7 @@ const setupNotificationWatcher = async () => {
                 console.log('Processing notification:', notification);
                 
                 if (notification.type === 'tv') {
-                    sendRefreshToTv(notification.id);
+                    await sendRefreshToTv(notification.id);
                 } else if (notification.type === 'group') {
                     const tvs = await getTvsByGroupId(notification.id);
                     tvs.forEach(tv => sendRefreshToTv(tv.tvId));
@@ -64,20 +64,35 @@ const setupNotificationWatcher = async () => {
     }
 };
 
-const sendRefreshToTv = (tvId: string) => {
+const sendRefreshToTv = async (tvId: string) => {
     const ws = tvConnections.get(tvId);
     if (ws && ws.readyState === WebSocket.OPEN) {
-        console.log(`Sending REFRESH_STATE to ${tvId}`);
-        ws.send(JSON.stringify({ type: 'REFRESH_STATE' }));
+        const tvDoc = await getTvById(tvId);
+        // If the TV is registered, update its online status and tell it to refresh
+        if (tvDoc) {
+             // Mark as online
+            if (tvDoc.socketId === null) {
+                console.log(`TV ${tvId} is now registered and connected, marking as online.`);
+                await handleTvConnection(tvId, true);
+            }
+            console.log(`Sending REFRESH_STATE to ${tvId}`);
+            ws.send(JSON.stringify({ type: 'REFRESH_STATE' }));
+        } else {
+             console.log(`Received notification for unregistered TV ${tvId}, skipping.`);
+        }
     } else {
         console.log(`No active connection found for TV ${tvId} to send refresh.`);
     }
 };
 
-const handleTvConnection = async (tvId: string, ws: WebSocket, isConnecting: boolean) => {
+const handleTvConnection = async (tvId: string, isConnecting: boolean) => {
     const socketId = isConnecting ? `ws-${Date.now()}` : null;
-    await setTvOnlineStatus(tvId, isConnecting, socketId);
-    broadcastToAdmins({ type: 'status-changed', payload: { tvId, isOnline: isConnecting } });
+    try {
+        await setTvOnlineStatus(tvId, isConnecting, socketId);
+        broadcastToAdmins({ type: 'status-changed', payload: { tvId, isOnline: isConnecting } });
+    } catch (error) {
+        console.error(`Error updating TV status for ${tvId}:`, error);
+    }
 };
 
 wss.on('connection', (ws) => {
@@ -113,9 +128,9 @@ wss.on('connection', (ws) => {
 
                     const tvDoc = await getTvById(clientId);
                     if (tvDoc) {
-                        await handleTvConnection(clientId, ws, true);
+                        await handleTvConnection(clientId, true);
                     } else {
-                        console.log(`TV is not registered. Skipping online status update for: ${clientId}`);
+                        console.log(`TV is not registered yet. Connection is pending registration for: ${clientId}`);
                     }
                     ws.send(JSON.stringify({ type: 'registered', tvId: clientId }));
                 }
@@ -135,7 +150,7 @@ wss.on('connection', (ws) => {
             console.log(`TV client disconnected: ${clientId}`);
             if (tvConnections.get(clientId) === ws) {
                 tvConnections.delete(clientId);
-                await handleTvConnection(clientId, ws, false);
+                await handleTvConnection(clientId, false);
             }
         } else {
             console.log('An unidentified client disconnected');
