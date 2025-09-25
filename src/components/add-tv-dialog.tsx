@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useTransition, useEffect, useRef, useCallback } from 'react';
+import { useState, useTransition, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from '@/hooks/use-toast';
 import { registerTvAction } from '@/lib/actions';
-import { Loader2, QrCode, Text, VideoOff } from 'lucide-react';
+import { Loader2, QrCode, Text, Video, Camera } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { useZxing } from 'react-zxing';
+import { Scanner } from 'react-zxing';
 
 interface AddTvDialogProps {
   open: boolean;
@@ -23,71 +23,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manual");
-  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | undefined>(undefined);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  const { ref } = useZxing({
-    paused: activeTab !== 'qr' || !open || !hasCameraPermission,
-    videoRef,
-    onResult(result) {
-      if (!isPending) {
-        const id = result.getText();
-        setTvId(id);
-        toast({ title: 'QR Code Scanned', description: `TV ID: ${id}` });
-      }
-    },
-    onDecodeError(error) {
-      if (error && !(error instanceof DOMException)) {
-        console.info(error);
-      }
-    },
-  });
-
-  const stopCamera = useCallback(() => {
-    if (videoRef.current && videoRef.current.srcObject) {
-      const stream = videoRef.current.srcObject as MediaStream;
-      stream.getTracks().forEach(track => track.stop());
-      videoRef.current.srcObject = null;
-    }
-  }, [videoRef]);
-
-  useEffect(() => {
-    let isMounted = true;
-    if (open && activeTab === 'qr') {
-      const getCameraPermission = async () => {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          if (isMounted) {
-            setHasCameraPermission(true);
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-            }
-          } else {
-            stream.getTracks().forEach(track => track.stop());
-          }
-        } catch (error) {
-          if (isMounted) {
-            console.error('Error accessing camera:', error);
-            setHasCameraPermission(false);
-            toast({
-              variant: 'destructive',
-              title: 'Camera Access Denied',
-              description: 'Please enable camera permissions in your browser settings to use this feature.',
-            });
-          }
-        }
-      };
-      getCameraPermission();
-    } else {
-      stopCamera();
-    }
-    
-    return () => {
-      isMounted = false;
-      stopCamera();
-    };
-  }, [open, activeTab, stopCamera, toast]);
-
+  const [isCameraEnabled, setIsCameraEnabled] = useState(false);
 
   const handleRegister = (id: string, name: string) => {
     if (!id || !id.trim()) {
@@ -116,20 +52,34 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     handleRegister(tvId, tvName);
   };
   
+  const resetQrScanner = useCallback(() => {
+    setIsCameraEnabled(false);
+    setTvId('');
+  }, []);
+  
   const handleTabChange = (value: string) => {
     setTvId('');
     setTvName('');
     setActiveTab(value);
     if (value !== 'qr') {
-      stopCamera();
+      resetQrScanner();
     }
   }
   
   const handleDialogClose = (isOpen: boolean) => {
     onOpenChange(isOpen);
     if (!isOpen) {
-        stopCamera();
-        handleTabChange("manual");
+        resetQrScanner();
+        setActiveTab("manual");
+    }
+  }
+  
+  const handleScanSuccess = (result: any) => {
+    if (result && result.getText()) {
+        const id = result.getText();
+        setTvId(id);
+        toast({ title: 'QR Code Scanned', description: `TV ID set.` });
+        setIsCameraEnabled(false);
     }
   }
 
@@ -183,18 +133,26 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
             </TabsContent>
             <TabsContent value="qr" className="pt-4">
               <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted mb-4">
-                <video ref={videoRef} className="w-full h-full object-cover" autoPlay playsInline muted />
-                {hasCameraPermission === false && (
-                    <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
-                        <VideoOff className="mb-4 h-12 w-12 text-muted-foreground" />
-                        <h3 className="font-semibold">Camera Access Denied</h3>
-                        <p className="text-sm text-muted-foreground">Please grant camera permissions in your browser settings to use the QR scanner.</p>
+                {!isCameraEnabled ? (
+                     <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
+                        <Video className="mb-4 h-12 w-12 text-muted-foreground" />
+                        <h3 className="font-semibold">Camera is off</h3>
+                        <p className="text-sm text-muted-foreground mb-4">Click the button below to start scanning.</p>
+                        <Button onClick={() => setIsCameraEnabled(true)}>
+                            <Camera className="mr-2" />
+                            Enable Camera
+                        </Button>
                     </div>
-                )}
-                {hasCameraPermission === undefined && (
-                     <div className="absolute inset-0 flex h-full flex-col items-center justify-center bg-background/80">
-                         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                     </div>
+                ) : (
+                    <Scanner
+                        onResult={handleScanSuccess}
+                        onError={(error) => {
+                            if (error) {
+                                toast({ variant: 'destructive', title: 'Camera Error', description: error.message });
+                                setIsCameraEnabled(false);
+                            }
+                        }}
+                    />
                 )}
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
