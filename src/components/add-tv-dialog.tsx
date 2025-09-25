@@ -11,6 +11,7 @@ import { Loader2, QrCode, Text, Video, Camera } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { useZxing } from 'react-zxing';
+import { ScrollArea } from './ui/scroll-area';
 
 interface AddTvDialogProps {
   open: boolean;
@@ -127,117 +128,121 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="font-headline">Add a New TV</DialogTitle>
-          <DialogDescription>
-            Register a new TV by entering its unique ID or scanning a QR code.
-          </DialogDescription>
-        </DialogHeader>
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="manual"><Text className="mr-2" />Manual</TabsTrigger>
-                <TabsTrigger value="qr"><QrCode className="mr-2" />QR Code</TabsTrigger>
-            </TabsList>
-            <TabsContent value="manual" className="py-4">
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="tvNameManual" className="text-left">
-                            TV Name
-                        </Label>
+        <ScrollArea className="max-h-[85vh]">
+          <div className='p-6'>
+            <DialogHeader>
+              <DialogTitle className="font-headline">Add a New TV</DialogTitle>
+              <DialogDescription>
+                Register a new TV by entering its unique ID or scanning a QR code.
+              </DialogDescription>
+            </DialogHeader>
+            <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full mt-4">
+                <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="manual"><Text className="mr-2" />Manual</TabsTrigger>
+                    <TabsTrigger value="qr"><QrCode className="mr-2" />QR Code</TabsTrigger>
+                </TabsList>
+                <TabsContent value="manual" className="py-4">
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="tvNameManual" className="text-left">
+                                TV Name
+                            </Label>
+                            <Input
+                                id="tvNameManual"
+                                value={tvName}
+                                onChange={(e) => setTvName(e.target.value)}
+                                placeholder="e.g., Lobby Entrance TV"
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="tvIdManual" className="text-left">
+                                TV Unique ID
+                            </Label>
+                            <Input
+                                id="tvIdManual"
+                                value={tvId}
+                                onChange={(e) => setTvId(e.target.value)}
+                                placeholder="e.g., tv-lobby-main-001"
+                                required
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button type="submit" disabled={isPending} className='w-full'>
+                                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Register TV
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </TabsContent>
+                <TabsContent value="qr" className="pt-4">
+                  <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted mb-4">
+                      <video ref={zxingRef} className={`w-full h-full object-cover ${isCameraEnabled ? '' : 'hidden'}`} autoPlay muted playsInline />
+                      {!isCameraEnabled && (
+                         <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
+                            {hasCameraPermission === false ? (
+                                <Alert variant="destructive" className='text-left'>
+                                    <Camera className="h-4 w-4" />
+                                    <AlertTitle>Camera Access Denied</AlertTitle>
+                                    <AlertDescription>
+                                        Please enable camera permissions in your browser settings to use this feature.
+                                    </AlertDescription>
+                                </Alert>
+                            ) : (
+                                <>
+                                    <Video className="mb-4 h-12 w-12 text-muted-foreground" />
+                                    <h3 className="font-semibold">Camera is off</h3>
+                                    <p className="text-sm text-muted-foreground mb-4">Click the button below to start scanning.</p>
+                                    <Button onClick={handleEnableCamera}>
+                                        <Camera className="mr-2" />
+                                        Enable Camera
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                      )}
+                  </div>
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <Alert>
+                        <QrCode className="h-4 w-4" />
+                        <AlertTitle>Scan QR Code</AlertTitle>
+                        <AlertDescription>
+                            Point your camera at the QR code displayed on the TV screen. The ID will appear below.
+                        </AlertDescription>
+                    </Alert>
+
+                     <div className="space-y-2">
+                        <Label htmlFor="tvNameQr">TV Name</Label>
                         <Input
-                            id="tvNameManual"
+                            id="tvNameQr"
                             value={tvName}
                             onChange={(e) => setTvName(e.target.value)}
-                            placeholder="e.g., Lobby Entrance TV"
+                            placeholder="Enter TV name after scanning"
                             required
                         />
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="tvIdManual" className="text-left">
-                            TV Unique ID
-                        </Label>
+                     <div className="space-y-2">
+                        <Label htmlFor="tvIdQr">TV Unique ID (scanned)</Label>
                         <Input
-                            id="tvIdManual"
+                            id="tvIdQr"
                             value={tvId}
+                            readOnly
                             onChange={(e) => setTvId(e.target.value)}
-                            placeholder="e.g., tv-lobby-main-001"
-                            required
+                            placeholder="Scan QR code to populate"
+                            className="bg-muted"
                         />
                     </div>
                     <DialogFooter>
-                        <Button type="submit" disabled={isPending} className='w-full'>
+                        <Button type="submit" disabled={isPending || !tvId} className='w-full'>
                             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Register TV
                         </Button>
                     </DialogFooter>
-                </form>
-            </TabsContent>
-            <TabsContent value="qr" className="pt-4">
-              <div className="relative aspect-video w-full overflow-hidden rounded-md border bg-muted mb-4">
-                  <video ref={zxingRef} className={`w-full h-full object-cover ${isCameraEnabled ? '' : 'hidden'}`} autoPlay muted playsInline />
-                  {!isCameraEnabled && (
-                     <div className="absolute inset-0 flex h-full flex-col items-center justify-center p-4 text-center bg-background/80">
-                        {hasCameraPermission === false ? (
-                            <Alert variant="destructive" className='text-left'>
-                                <Camera className="h-4 w-4" />
-                                <AlertTitle>Camera Access Denied</AlertTitle>
-                                <AlertDescription>
-                                    Please enable camera permissions in your browser settings to use this feature.
-                                </AlertDescription>
-                            </Alert>
-                        ) : (
-                            <>
-                                <Video className="mb-4 h-12 w-12 text-muted-foreground" />
-                                <h3 className="font-semibold">Camera is off</h3>
-                                <p className="text-sm text-muted-foreground mb-4">Click the button below to start scanning.</p>
-                                <Button onClick={handleEnableCamera}>
-                                    <Camera className="mr-2" />
-                                    Enable Camera
-                                </Button>
-                            </>
-                        )}
-                    </div>
-                  )}
-              </div>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <Alert>
-                    <QrCode className="h-4 w-4" />
-                    <AlertTitle>Scan QR Code</AlertTitle>
-                    <AlertDescription>
-                        Point your camera at the QR code displayed on the TV screen. The ID will appear below.
-                    </AlertDescription>
-                </Alert>
-
-                 <div className="space-y-2">
-                    <Label htmlFor="tvNameQr">TV Name</Label>
-                    <Input
-                        id="tvNameQr"
-                        value={tvName}
-                        onChange={(e) => setTvName(e.target.value)}
-                        placeholder="Enter TV name after scanning"
-                        required
-                    />
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="tvIdQr">TV Unique ID (scanned)</Label>
-                    <Input
-                        id="tvIdQr"
-                        value={tvId}
-                        readOnly
-                        onChange={(e) => setTvId(e.target.value)}
-                        placeholder="Scan QR code to populate"
-                        className="bg-muted"
-                    />
-                </div>
-                <DialogFooter>
-                    <Button type="submit" disabled={isPending || !tvId} className='w-full'>
-                        {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Register TV
-                    </Button>
-                </DialogFooter>
-              </form>
-            </TabsContent>
-        </Tabs>
+                  </form>
+                </TabsContent>
+            </Tabs>
+          </div>
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
