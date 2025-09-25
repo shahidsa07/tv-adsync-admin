@@ -1,6 +1,6 @@
 'server-only';
 import { db } from '@/lib/firebase';
-import type { TV, Group, Ad, Playlist, PriorityStream } from '@/lib/definitions';
+import type { TV, Group, Ad, Playlist, PriorityStream, AdPlay, AdPerformanceData, AnalyticsSettings } from '@/lib/definitions';
 import { FieldValue } from 'firebase-admin/firestore';
 
 
@@ -224,4 +224,76 @@ export const deletePlaylist = async (playlistId: string): Promise<boolean> => {
     
     await batch.commit();
     return true;
+};
+
+// --- ANALYTICS ---
+
+export const getAnalyticsSettings = async (): Promise<AnalyticsSettings> => {
+    if (!db) return { isTrackingEnabled: false };
+    const docRef = db.collection('settings').doc('analytics');
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+        return docSnap.data() as AnalyticsSettings;
+    }
+    // Default to disabled if not set
+    return { isTrackingEnabled: false };
+};
+
+export const setAnalyticsSettings = async (settings: AnalyticsSettings): Promise<boolean> => {
+    if (!db) return false;
+    await db.collection('settings').doc('analytics').set(settings, { merge: true });
+    return true;
+};
+
+export const createAdPlay = async (adId: string, tvId: string, duration: number): Promise<void> => {
+    if (!db) return;
+    const tv = await getTvById(tvId);
+    const playId = `play-${Date.now()}`;
+    const adPlay: AdPlay = {
+        id: playId,
+        adId,
+        tvId,
+        groupId: tv?.groupId || null,
+        playedAt: Date.now(),
+        duration,
+    };
+    await db.collection('adPlays').doc(playId).set(adPlay);
+};
+
+export const getAdPerformance = async (): Promise<AdPerformanceData[]> => {
+    if (!db) return [];
+
+    const adPlaysSnapshot = await db.collection('adPlays').get();
+    if (adPlaysSnapshot.empty) return [];
+
+    const allAds = await getAds();
+    const adMap = new Map(allAds.map(ad => [ad.id, ad.name]));
+
+    const performanceMap: Map<string, { totalPlaytime: number; tvs: Set<string>; playCount: number }> = new Map();
+
+    adPlaysSnapshot.docs.forEach(doc => {
+        const play = doc.data() as AdPlay;
+        
+        if (!performanceMap.has(play.adId)) {
+            performanceMap.set(play.adId, { totalPlaytime: 0, tvs: new Set(), playCount: 0 });
+        }
+
+        const stats = performanceMap.get(play.adId)!;
+        stats.totalPlaytime += play.duration;
+        stats.tvs.add(play.tvId);
+        stats.playCount += 1;
+    });
+
+    const performanceData: AdPerformanceData[] = [];
+    performanceMap.forEach((stats, adId) => {
+        performanceData.push({
+            adId,
+            adName: adMap.get(adId) || 'Unknown Ad',
+            totalPlaytime: stats.totalPlaytime,
+            uniqueTvs: stats.tvs.size,
+            playCount: stats.playCount,
+        });
+    });
+
+    return performanceData.sort((a, b) => b.totalPlaytime - a.totalPlaytime);
 };

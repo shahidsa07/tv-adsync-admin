@@ -350,3 +350,16 @@ export async function getAiGroupSuggestion(tvName: string, existingGroupNames: s
         return { success: false, message: 'AI suggestion service is unavailable.' };
     }
 }
+
+// --- Analytics Actions ---
+
+export async function setAnalyticsTrackingAction(isEnabled: boolean) {
+    try {
+        await data.setAnalyticsSettings({ isTrackingEnabled: isEnabled });
+        revalidatePath('/analytics');
+        return { success: true, message: `Ad tracking ${isEnabled ? 'enabled' : 'disabled'}.` };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update analytics settings.';
+        return { success: false, message };
+    }
+}

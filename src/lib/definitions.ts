@@ -30,3 +30,24 @@ export interface Group {
   playlistId: string | null;
   priorityStream: PriorityStream | null;
 }
+
+export interface AdPlay {
+    id: string;
+    adId: string;
+    tvId: string;
+    groupId: string | null;
+    playedAt: number; // Firestore timestamp
+    duration: number;
+}
+
+export interface AdPerformanceData {
+    adId: string;
+    adName: string;
+    totalPlaytime: number;
+    uniqueTvs: number;
+    playCount: number;
+}
+
+export interface AnalyticsSettings {
+    isTrackingEnabled: boolean;
+}

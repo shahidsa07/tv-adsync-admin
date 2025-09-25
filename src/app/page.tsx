@@ -1,6 +1,6 @@
 import { Header } from '@/components/header';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Clapperboard, Monitor, Tv, Users, ListVideo } from 'lucide-react';
+import { Clapperboard, Monitor, Tv, Users, ListVideo, BarChart3 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Home() {
@@ -29,6 +29,12 @@ export default function Home() {
       href: '/playlists', 
       icon: <ListVideo className="h-8 w-8" />,
     },
+    {
+      title: 'Ad Analytics',
+      description: 'Track ad performance and generate reports.',
+      href: '/analytics',
+      icon: <BarChart3 className="h-8 w-8" />,
+    }
   ];
 
   return (
