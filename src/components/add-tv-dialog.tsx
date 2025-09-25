@@ -100,17 +100,21 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   }
 
   const handleEnableCamera = async () => {
-    try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-        }
-        setHasCameraPermission(true);
-        setIsCameraEnabled(true);
-    } catch (error) {
-        console.error("Camera permission error:", error);
-        setHasCameraPermission(false);
-        toast({ variant: 'destructive', title: 'Camera Access Denied', description: 'Please enable camera permissions in your browser settings.' });
+    if (typeof window !== 'undefined' && navigator.mediaDevices) {
+      try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          if (videoRef.current) {
+              videoRef.current.srcObject = stream;
+          }
+          setHasCameraPermission(true);
+          setIsCameraEnabled(true);
+      } catch (error) {
+          console.error("Camera permission error:", error);
+          setHasCameraPermission(false);
+          toast({ variant: 'destructive', title: 'Camera Access Denied', description: 'Please enable camera permissions in your browser settings.' });
+      }
+    } else {
+        toast({ variant: 'destructive', title: 'Error', description: 'Camera access is not supported in this environment.'});
     }
   }
 
