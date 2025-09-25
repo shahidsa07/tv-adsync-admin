@@ -11,38 +11,42 @@ import { Loader2, QrCode, Text } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5QrcodeScanner, Html5QrcodeError, Html5QrcodeResult } from 'html5-qrcode';
 
 const qrcodeRegionId = "html5qr-code-full-region";
 
-const Html5QrcodePlugin = ({ onScanSuccess, onScanFailure }: { onScanSuccess: (decodedText: string) => void, onScanFailure: (error: string) => void }) => {
+// Custom hook for managing the QR code scanner
+const useQRCodeScanner = ({ onScanSuccess, onScanFailure }: { onScanSuccess: (decodedText: string, result: Html5QrcodeResult) => void, onScanFailure: (error: string, result: Html5QrcodeResult) => void }) => {
     const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
-    useEffect(() => {
-        if (!scannerRef.current) {
-            const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                rememberLastUsedCamera: true,
-            };
-            const html5QrcodeScanner = new Html5QrcodeScanner(qrcodeRegionId, config, false);
-            scannerRef.current = html5QrcodeScanner;
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    const startScanner = () => {
+        if (scannerRef.current) {
+            console.log("Scanner already running.");
+            return;
         }
 
-        return () => {
-            if (scannerRef.current) {
-                scannerRef.current.clear().catch(error => {
-                    console.error("Failed to clear html5QrcodeScanner.", error);
-                });
-                scannerRef.current = null;
-            }
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            rememberLastUsedCamera: true,
         };
-    }, [onScanSuccess, onScanFailure]);
 
-    return <div id={qrcodeRegionId} className="w-full" />;
+        const newScanner = new Html5QrcodeScanner(qrcodeRegionId, config, false);
+        newScanner.render(onScanSuccess, onScanFailure);
+        scannerRef.current = newScanner;
+    };
+
+    const clearScanner = useCallback(() => {
+        if (scannerRef.current) {
+            scannerRef.current.clear().catch(error => {
+                console.error("Failed to clear html5QrcodeScanner.", error);
+            });
+            scannerRef.current = null;
+        }
+    }, []);
+
+    return { startScanner, clearScanner };
 };
-
 
 interface AddTvDialogProps {
   open: boolean;
@@ -56,12 +60,37 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manual");
   
+  const onScanSuccess = useCallback((decodedText: string) => {
+    toast({ title: 'QR Code Scanned', description: `TV ID set to ${decodedText}` });
+    setTvId(decodedText);
+    setActiveTab('manual');
+  }, [toast]);
+  
+  const onScanFailure = useCallback((error: string) => {
+     // console.warn(`QR scan error: ${error}`);
+  }, []);
+
+  const { startScanner, clearScanner } = useQRCodeScanner({ onScanSuccess, onScanFailure });
+  
+  // Effect to manage scanner based on tab and dialog state
+  useEffect(() => {
+    if (open && activeTab === 'qr') {
+      // Delay slightly to ensure the DOM element is ready
+      const timer = setTimeout(() => {
+        startScanner();
+      }, 100);
+      return () => clearTimeout(timer);
+    } else {
+      clearScanner();
+    }
+  }, [open, activeTab, startScanner, clearScanner]);
+
   const handleDialogChange = (isOpen: boolean) => {
-    onOpenChange(isOpen);
     if (!isOpen) {
-      // Reset tab to manual when dialog is closed
+      clearScanner();
       setActiveTab("manual");
     }
+    onOpenChange(isOpen);
   }
 
   const handleRegister = (id: string, name: string) => {
@@ -90,17 +119,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     e.preventDefault();
     handleRegister(tvId, tvName);
   };
-
-  const onScanSuccess = useCallback((decodedText: string) => {
-    setTvId(decodedText);
-    toast({ title: 'QR Code Scanned', description: `TV ID set to ${decodedText}` });
-    setActiveTab('manual');
-  }, [toast]);
   
-  const onScanFailure = useCallback((error: string) => {
-     // console.warn(`QR scan error: ${error}`);
-  }, []);
-
   return (
     <Dialog open={open} onOpenChange={handleDialogChange}>
       <DialogContent className="sm:max-w-md">
@@ -152,7 +171,8 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
                     </form>
                 </TabsContent>
                 <TabsContent value="qr" className="pt-4">
-                  {activeTab === 'qr' && <Html5QrcodePlugin onScanSuccess={onScanSuccess} onScanFailure={onScanFailure} />}
+                  {/* The div for the scanner is always here, but the scanner is only started when the tab is active */}
+                  <div id={qrcodeRegionId} className="w-full" />
                   <form onSubmit={handleSubmit} className="space-y-4 mt-4">
                     <Alert>
                         <QrCode className="h-4 w-4" />
