@@ -6,8 +6,6 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
-
 export default async function TvsPage() {
   const tvs = await getTvs();
   const groups = await getGroups();

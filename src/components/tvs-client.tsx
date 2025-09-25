@@ -1,13 +1,11 @@
 "use client";
 
 import type { TV, Group } from "@/lib/definitions";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { TvCard } from "./tv-card";
 import { Button } from "./ui/button";
 import { PlusCircle } from "lucide-react";
 import { AddTvDialog } from "./add-tv-dialog";
-import { useWebSocket } from "@/hooks/use-websocket";
-import { useRouter } from "next/navigation";
 
 interface TvsClientProps {
   initialTvs: TV[];
@@ -19,16 +17,6 @@ type FilterType = "all" | "assigned" | "unassigned";
 export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
   const [filter, setFilter] = useState<FilterType>("all");
   const [showAddTvDialog, setShowAddTvDialog] = useState(false);
-  const router = useRouter();
-
-  useWebSocket({
-    onMessage: (event) => {
-      if (event.type === 'tv-status-changed') {
-        console.log('TV status changed, refreshing data...');
-        router.refresh();
-      }
-    }
-  });
 
   const filteredTvs = useMemo(() => {
     if (filter === "assigned") {

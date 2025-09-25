@@ -230,5 +230,3 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     </Dialog>
   );
 }
-
-    

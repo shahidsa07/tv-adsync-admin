@@ -59,7 +59,7 @@ export async function updateGroupPlaylistAction(groupId: string, playlistId: str
     try {
         await data.updateGroup(groupId, { playlistId });
         notifyGroup(groupId);
-        revalidatePath(`/groups/${groupId}`, 'page');
+        revalidatePath(`/groups/${groupId}`);
         revalidatePath('/groups');
         return { success: true, message: 'Group playlist updated.' };
     } catch (error) {
@@ -161,24 +161,17 @@ export async function removeFromGroupAction(tvId: string) {
 
 export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean, socketId: string | null) {
     try {
-        const tv = await data.getTvById(tvId);
-        if (!tv) {
-            // This case is handled in websocket-server.ts, but as a safeguard:
-            console.log(`setTvOnlineStatusAction: TV with ID ${tvId} not found. Skipping update.`);
-            return { success: true, message: 'TV not found, no status updated.' };
-        }
-
         await data.setTvOnlineStatus(tvId, isOnline, socketId);
         
-        // Revalidate all paths where online status is visible.
-        // Using `revalidatePath('/', 'layout')` is a broad but effective way to ensure all
-        // dependent pages get fresh data.
-        revalidatePath('/', 'layout');
-        
+        // This revalidation seems to not be enough to trigger a client-side update
+        // for a page that is already being viewed.
+        revalidatePath(`/dashboard`);
+        revalidatePath(`/tvs`);
+        revalidatePath(`/groups`);
+
         return { success: true, message: `TV status updated.` };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update TV status.'
-        console.error("Error in setTvOnlineStatusAction:", message);
         return { success: false, message };
     }
 }
@@ -331,7 +324,7 @@ export async function updatePlaylistAdsAction(playlistId: string, adIds: string[
         await data.updatePlaylist(playlistId, { adIds });
         const groups = await data.getGroupsByPlaylistId(playlistId);
         groups.forEach(group => notifyGroup(group.id));
-        revalidatePath(`/playlists/${playlistId}`, 'page');
+        revalidatePath(`/playlists/${playlistId}`);
         return { success: true, message: 'Playlist updated.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to update playlist.';

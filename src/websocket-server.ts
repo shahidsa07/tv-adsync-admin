@@ -1,9 +1,8 @@
-
 import { config } from 'dotenv';
 config(); // Load environment variables from .env file
 
 import { WebSocketServer, WebSocket } from 'ws';
-import { getTvById, getTvsByGroupId } from './lib/data';
+import { getTvById, setTvOnlineStatus, getTvsByGroupId } from './lib/data';
 import chokidar from 'chokidar';
 import fs from 'fs/promises';
 import path from 'path';
@@ -11,16 +10,8 @@ import path from 'path';
 const PORT = 8080;
 const wss = new WebSocketServer({ port: PORT });
 
-// In-memory mapping of tvId to WebSocket connection
 const tvConnections = new Map<string, WebSocket>();
-const adminConnections = new Set<WebSocket>();
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
-
-// The URL for the internal API route in the Next.js app
-const NEXTJS_APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:9002';
-const TV_STATUS_API_ENDPOINT = `${NEXTJS_APP_URL}/api/tv-status`;
-const API_SECRET = process.env.INTERNAL_API_SECRET || 'your-secret-key';
-
 
 console.log(`WebSocket server started on ws://localhost:${PORT}`);
 
@@ -58,39 +49,7 @@ const setupNotificationWatcher = async () => {
     } catch (error) {
         console.error('Error setting up notification watcher:', error);
     }
-}
-
-/**
- * Notifies the Next.js app to update the TV's online status.
- */
-const updateTvOnlineStatusInApi = async (tvId: string, isOnline: boolean, socketId: string | null) => {
-    try {
-        console.log(`Notifying Next.js to update status for ${tvId} to ${isOnline ? 'online' : 'offline'}`);
-        const response = await fetch(TV_STATUS_API_ENDPOINT, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${API_SECRET}`
-            },
-            body: JSON.stringify({ tvId, isOnline, socketId }),
-        });
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`API call failed with status ${response.status}: ${errorText}`);
-        }
-
-        const result = await response.json();
-        console.log(`Successfully notified Next.js for ${tvId}:`, result.message);
-        
-        // After successful API update, notify admin clients
-        broadcastToAdmins({ type: 'tv-status-changed', payload: { tvId, isOnline } });
-
-    } catch (error) {
-        console.error(`Failed to update TV online status via API for ${tvId}:`, error);
-    }
 };
-
 
 const sendRefreshToTv = (tvId: string) => {
     const ws = tvConnections.get(tvId);
@@ -102,28 +61,18 @@ const sendRefreshToTv = (tvId: string) => {
     }
 };
 
-const broadcastToAdmins = (message: object) => {
-    console.log(`Broadcasting to ${adminConnections.size} admin clients:`, message);
-    adminConnections.forEach(ws => {
-        if (ws.readyState === WebSocket.OPEN) {
-            ws.send(JSON.stringify(message));
-        }
-    });
-}
-
 wss.on('connection', (ws) => {
     let tvId: string | null = null;
-    let clientType: 'tv' | 'admin' | null = null;
 
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message.toString());
 
-            if (data.type === 'register-tv' && data.payload?.tvId) {
-                clientType = 'tv';
+            if (data.type === 'register' && data.payload?.tvId) {
                 const incomingTvId = data.payload.tvId;
                 tvId = incomingTvId;
                 
+                // If there's an old connection for this TV, terminate it.
                 if (tvConnections.has(incomingTvId)) {
                     console.log(`Terminating old connection for ${incomingTvId}`);
                     tvConnections.get(incomingTvId)?.terminate();
@@ -132,22 +81,22 @@ wss.on('connection', (ws) => {
                 tvConnections.set(incomingTvId, ws);
                 console.log(`TV connection opened: ${incomingTvId}`);
 
+                // Check if the TV is registered in Firestore
                 const tvDoc = await getTvById(incomingTvId);
+
+                // We only set the status to "online" if the TV is actually registered.
                 if (tvDoc) {
                     const socketId = `ws-${Date.now()}`;
-                    await updateTvOnlineStatusInApi(incomingTvId, true, socketId);
+                    await setTvOnlineStatus(incomingTvId, true, socketId);
                 } else {
+                    // If the TV is not registered, we don't mark it as online in the DB.
+                    // The client will still get a "registered" message which just confirms
+                    // the WebSocket connection is established. It should show the registration screen.
                     console.log(`TV is not registered. Skipping online status update for: ${incomingTvId}`);
                 }
                 ws.send(JSON.stringify({ type: 'registered', tvId: incomingTvId }));
 
-            } else if (data.type === 'register-admin') {
-                clientType = 'admin';
-                adminConnections.add(ws);
-                console.log(`Admin client connected. Total admins: ${adminConnections.size}`);
-                ws.send(JSON.stringify({ type: 'admin-registered' }));
-            }
-             else {
+            } else {
                 console.log('Received unknown message type:', data.type);
             }
         } catch (error) {
@@ -156,15 +105,13 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', async () => {
-        if (clientType === 'tv' && tvId) {
+        if (tvId) {
             console.log(`TV client disconnected: ${tvId}`);
+            // Only update status if the closing connection is the one we have mapped.
             if (tvConnections.get(tvId) === ws) {
                 tvConnections.delete(tvId);
-                await updateTvOnlineStatusInApi(tvId, false, null);
+                await setTvOnlineStatus(tvId, false, null);
             }
-        } else if (clientType === 'admin') {
-            adminConnections.delete(ws);
-            console.log(`Admin client disconnected. Total admins: ${adminConnections.size}`);
         } else {
             console.log('An unregistered client disconnected');
         }

@@ -7,8 +7,6 @@ import Link from 'next/link';
 import { GroupsClient } from '@/components/groups-client';
 import { seedInitialData } from '@/lib/seed';
 
-export const dynamic = 'force-dynamic';
-
 export default async function GroupsPage() {
   await seedInitialData();
   const tvs = await getTvs();

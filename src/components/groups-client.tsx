@@ -6,8 +6,6 @@ import { GroupCard } from './group-card';
 import { CreateGroupDialog } from './create-group-dialog';
 import { Button } from './ui/button';
 import { PlusCircle } from 'lucide-react';
-import { useWebSocket } from '@/hooks/use-websocket';
-import { useRouter } from 'next/navigation';
 
 interface GroupsClientProps {
   initialTvs: TV[];
@@ -18,16 +16,6 @@ interface GroupsClientProps {
 export function GroupsClient({ initialTvs, initialGroups, initialPlaylists }: GroupsClientProps) {
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const playlistMap = new Map(initialPlaylists.map(p => [p.id, p.name]));
-  const router = useRouter();
-
-  useWebSocket({
-    onMessage: (event) => {
-      if (event.type === 'tv-status-changed') {
-        console.log('TV status changed, refreshing data...');
-        router.refresh();
-      }
-    }
-  });
 
   return (
     <div className="space-y-8">
