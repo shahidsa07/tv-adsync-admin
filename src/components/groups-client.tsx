@@ -6,6 +6,7 @@ import { GroupCard } from './group-card';
 import { CreateGroupDialog } from './create-group-dialog';
 import { Button } from './ui/button';
 import { PlusCircle } from 'lucide-react';
+import { useWebSocket } from '@/hooks/use-websocket';
 
 interface GroupsClientProps {
   initialTvs: TV[];
@@ -16,6 +17,8 @@ interface GroupsClientProps {
 export function GroupsClient({ initialTvs, initialGroups, initialPlaylists }: GroupsClientProps) {
   const [showCreateGroupDialog, setShowCreateGroupDialog] = useState(false);
   const playlistMap = new Map(initialPlaylists.map(p => [p.id, p.name]));
+
+  useWebSocket();
 
   return (
     <div className="space-y-8">

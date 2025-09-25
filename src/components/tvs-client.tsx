@@ -6,6 +6,7 @@ import { TvCard } from "./tv-card";
 import { Button } from "./ui/button";
 import { PlusCircle } from "lucide-react";
 import { AddTvDialog } from "./add-tv-dialog";
+import { useWebSocket } from "@/hooks/use-websocket";
 
 interface TvsClientProps {
   initialTvs: TV[];
@@ -17,6 +18,8 @@ type FilterType = "all" | "assigned" | "unassigned";
 export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
   const [filter, setFilter] = useState<FilterType>("all");
   const [showAddTvDialog, setShowAddTvDialog] = useState(false);
+
+  useWebSocket();
 
   const filteredTvs = useMemo(() => {
     if (filter === "assigned") {

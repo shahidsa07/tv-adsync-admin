@@ -1,10 +1,13 @@
 
+
 import { getTvs, getGroups } from '@/lib/data';
 import { Header } from '@/components/header';
 import { TvsClient } from '@/components/tvs-client';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+
+export const dynamic = 'force-dynamic';
 
 export default async function TvsPage() {
   const tvs = await getTvs();

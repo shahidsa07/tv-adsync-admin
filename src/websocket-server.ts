@@ -10,10 +10,23 @@ import path from 'path';
 const PORT = 8080;
 const wss = new WebSocketServer({ port: PORT });
 
+// Separate maps for different client types
 const tvConnections = new Map<string, WebSocket>();
+const adminConnections = new Set<WebSocket>();
+
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
 console.log(`WebSocket server started on ws://localhost:${PORT}`);
+
+// Function to broadcast messages to all admin clients
+const broadcastToAdmins = (message: object) => {
+    const messageString = JSON.stringify(message);
+    adminConnections.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(messageString);
+        }
+    });
+};
 
 const setupNotificationWatcher = async () => {
     try {
@@ -61,41 +74,51 @@ const sendRefreshToTv = (tvId: string) => {
     }
 };
 
+const handleTvConnection = async (tvId: string, ws: WebSocket, isConnecting: boolean) => {
+    const socketId = isConnecting ? `ws-${Date.now()}` : null;
+    await setTvOnlineStatus(tvId, isConnecting, socketId);
+    broadcastToAdmins({ type: 'status-changed', payload: { tvId, isOnline: isConnecting } });
+};
+
 wss.on('connection', (ws) => {
-    let tvId: string | null = null;
+    let clientId: string | null = null;
+    let clientType: 'tv' | 'admin' | null = null;
 
     ws.on('message', async (message) => {
         try {
             const data = JSON.parse(message.toString());
 
-            if (data.type === 'register' && data.payload?.tvId) {
-                const incomingTvId = data.payload.tvId;
-                tvId = incomingTvId;
+            if (data.type === 'register' && data.payload) {
+                const { tvId, clientType: type } = data.payload;
+
+                if (type === 'admin') {
+                    clientType = 'admin';
+                    adminConnections.add(ws);
+                    console.log('Admin client connected');
+                    ws.send(JSON.stringify({ type: 'registered', clientType: 'admin' }));
+                    return;
+                }
                 
-                // If there's an old connection for this TV, terminate it.
-                if (tvConnections.has(incomingTvId)) {
-                    console.log(`Terminating old connection for ${incomingTvId}`);
-                    tvConnections.get(incomingTvId)?.terminate();
+                if (tvId) {
+                    clientType = 'tv';
+                    clientId = tvId;
+                    
+                    if (tvConnections.has(clientId)) {
+                        console.log(`Terminating old connection for ${clientId}`);
+                        tvConnections.get(clientId)?.terminate();
+                    }
+
+                    tvConnections.set(clientId, ws);
+                    console.log(`TV connection opened: ${clientId}`);
+
+                    const tvDoc = await getTvById(clientId);
+                    if (tvDoc) {
+                        await handleTvConnection(clientId, ws, true);
+                    } else {
+                        console.log(`TV is not registered. Skipping online status update for: ${clientId}`);
+                    }
+                    ws.send(JSON.stringify({ type: 'registered', tvId: clientId }));
                 }
-
-                tvConnections.set(incomingTvId, ws);
-                console.log(`TV connection opened: ${incomingTvId}`);
-
-                // Check if the TV is registered in Firestore
-                const tvDoc = await getTvById(incomingTvId);
-
-                // We only set the status to "online" if the TV is actually registered.
-                if (tvDoc) {
-                    const socketId = `ws-${Date.now()}`;
-                    await setTvOnlineStatus(incomingTvId, true, socketId);
-                } else {
-                    // If the TV is not registered, we don't mark it as online in the DB.
-                    // The client will still get a "registered" message which just confirms
-                    // the WebSocket connection is established. It should show the registration screen.
-                    console.log(`TV is not registered. Skipping online status update for: ${incomingTvId}`);
-                }
-                ws.send(JSON.stringify({ type: 'registered', tvId: incomingTvId }));
-
             } else {
                 console.log('Received unknown message type:', data.type);
             }
@@ -105,15 +128,17 @@ wss.on('connection', (ws) => {
     });
 
     ws.on('close', async () => {
-        if (tvId) {
-            console.log(`TV client disconnected: ${tvId}`);
-            // Only update status if the closing connection is the one we have mapped.
-            if (tvConnections.get(tvId) === ws) {
-                tvConnections.delete(tvId);
-                await setTvOnlineStatus(tvId, false, null);
+        if (clientType === 'admin') {
+            adminConnections.delete(ws);
+            console.log('Admin client disconnected');
+        } else if (clientType === 'tv' && clientId) {
+            console.log(`TV client disconnected: ${clientId}`);
+            if (tvConnections.get(clientId) === ws) {
+                tvConnections.delete(clientId);
+                await handleTvConnection(clientId, ws, false);
             }
         } else {
-            console.log('An unregistered client disconnected');
+            console.log('An unidentified client disconnected');
         }
     });
 

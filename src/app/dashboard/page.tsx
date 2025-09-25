@@ -7,6 +7,8 @@ import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { seedInitialData } from '@/lib/seed';
 
+export const dynamic = 'force-dynamic';
+
 export default async function DashboardPage() {
   await seedInitialData();
   const tvs = await getTvs();
