@@ -4,9 +4,10 @@ import type { TV, Group } from "@/lib/definitions";
 import { useState, useMemo } from "react";
 import { TvCard } from "./tv-card";
 import { Button } from "./ui/button";
-import { PlusCircle } from "lucide-react";
+import { PlusCircle, Search } from "lucide-react";
 import { AddTvDialog } from "./add-tv-dialog";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { Input } from "./ui/input";
 
 interface TvsClientProps {
   initialTvs: TV[];
@@ -17,25 +18,37 @@ type FilterType = "all" | "assigned" | "unassigned" | "online" | "offline";
 
 export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
   const [filter, setFilter] = useState<FilterType>("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [showAddTvDialog, setShowAddTvDialog] = useState(false);
 
   useWebSocket();
 
   const filteredTvs = useMemo(() => {
-    switch (filter) {
-      case "assigned":
-        return initialTvs.filter((tv) => !!tv.groupId);
-      case "unassigned":
-        return initialTvs.filter((tv) => !tv.groupId);
-      case "online":
-        return initialTvs.filter((tv) => !!tv.socketId);
-      case "offline":
-        return initialTvs.filter((tv) => !tv.socketId);
-      case "all":
-      default:
-        return initialTvs;
-    }
-  }, [initialTvs, filter]);
+    const lowercasedSearchTerm = searchTerm.toLowerCase();
+    
+    return initialTvs
+      .filter((tv) => {
+        switch (filter) {
+          case "assigned":
+            return !!tv.groupId;
+          case "unassigned":
+            return !tv.groupId;
+          case "online":
+            return !!tv.socketId;
+          case "offline":
+            return !tv.socketId;
+          case "all":
+          default:
+            return true;
+        }
+      })
+      .filter((tv) => {
+        if (!lowercasedSearchTerm) return true;
+        const nameMatch = tv.name.toLowerCase().includes(lowercasedSearchTerm);
+        const locationMatch = tv.shopLocation?.toLowerCase().includes(lowercasedSearchTerm);
+        return nameMatch || locationMatch;
+      });
+  }, [initialTvs, filter, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -46,8 +59,18 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
             A complete list of all registered TVs in your system.
           </p>
         </div>
-        <div className="flex items-center gap-4">
-            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted p-1">
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+            <div className="relative w-full sm:w-auto">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Search name or location..."
+                    className="pl-8 sm:w-[200px] lg:w-[250px] bg-background"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </div>
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted p-1 w-full sm:w-auto">
                 <Button
                     variant={filter === "all" ? "default" : "ghost"}
                     size="sm"
@@ -105,7 +128,7 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
       ) : (
         <div className="text-center py-10 border-2 border-dashed rounded-lg">
           <p className="text-muted-foreground">
-            No TVs match the current filter.
+            No TVs match the current filters.
           </p>
         </div>
       )}
