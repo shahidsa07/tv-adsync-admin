@@ -77,48 +77,50 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
             </div>
           )}
         </CardContent>
-        <CardFooter className='gap-2'>
+        <CardFooter className='flex-col items-stretch gap-2'>
             {showRemoveFromGroup ? (
                 <Button variant="outline" className="w-full" onClick={handleRemoveFromGroup} disabled={isRemoving}>
                     {isRemoving ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <XCircle className="mr-2 h-4 w-4" />}
                     Remove from Group
                 </Button>
             ) : (
-                <div className="w-full flex gap-2">
+                <>
                     {!group && (
-                        <Button className="flex-grow bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
+                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
                         Assign Group
                         <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     )}
-                     <Button variant="outline" onClick={() => setIsEditing(true)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Edit
-                    </Button>
-                    <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                        <Button variant="destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
+                    <div className="flex gap-2 w-full">
+                        <Button variant="outline" className="flex-1" onClick={() => setIsEditing(true)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Edit
                         </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            This will permanently delete the TV <strong>{tv.name}</strong>. This action cannot be undone.
-                        </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleDelete} disabled={isDeletePending}>
-                            {isDeletePending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
-                            Delete TV
-                        </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                    </AlertDialog>
-                </div>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" className="flex-1">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will permanently delete the TV <strong>{tv.name}</strong>. This action cannot be undone.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDelete} disabled={isDeletePending}>
+                                    {isDeletePending && <Loader2 className="mr-2 h-4 w-4 animate-spin"/>}
+                                    Delete TV
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                </>
             )}
         </CardFooter>
       </Card>
