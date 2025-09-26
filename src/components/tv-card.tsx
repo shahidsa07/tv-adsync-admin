@@ -86,9 +86,9 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
             ) : (
                 <>
                     {!group && (
-                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
-                        Assign Group
-                        <ArrowRight className="ml-2 h-4 w-4" />
+                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)} disabled={!isOnline}>
+                            Assign Group
+                            <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     )}
                     <div className="flex gap-2 w-full">
