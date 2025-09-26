@@ -13,6 +13,7 @@ import { FileImage, Video, GripVertical, Trash2, Search, Loader2 } from "lucide-
 import { updatePlaylistAdsAction } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
+import { cn } from "@/lib/utils";
 
 interface PlaylistEditorClientProps {
     initialPlaylist: Playlist;
@@ -26,6 +27,10 @@ export function PlaylistEditorClient({ initialPlaylist, allAds }: PlaylistEditor
     const [isPending, startTransition] = useTransition();
     const { toast } = useToast();
 
+    // Drag and drop state
+    const [draggedAdId, setDraggedAdId] = useState<string | null>(null);
+    const [dragOverAdId, setDragOverAdId] = useState<string | null>(null);
+
     const filteredAds = useMemo(() => {
         return allAds.filter(ad => ad.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }, [allAds, searchTerm]);
@@ -36,9 +41,12 @@ export function PlaylistEditorClient({ initialPlaylist, allAds }: PlaylistEditor
     }, [selectedAdIds, allAds]);
     
     const handleAdToggle = (adId: string) => {
-        setSelectedAdIds(prev =>
-            prev.includes(adId) ? prev.filter(id => id !== adId) : [...prev, adId]
-        );
+        const newSelectedAdIds = selectedAdIds.includes(adId)
+            ? selectedAdIds.filter(id => id !== adId)
+            : [...selectedAdIds, adId];
+        
+        // When adding, add to the end. When removing, order doesn't matter.
+        setSelectedAdIds(newSelectedAdIds);
     };
 
     const handleSave = () => {
@@ -53,12 +61,57 @@ export function PlaylistEditorClient({ initialPlaylist, allAds }: PlaylistEditor
         });
     }
 
+    // --- Drag and Drop Handlers ---
+    const handleDragStart = (adId: string) => {
+        setDraggedAdId(adId);
+    };
+
+    const handleDragOver = (e: React.DragEvent, adId: string) => {
+        e.preventDefault();
+        if (adId !== dragOverAdId) {
+            setDragOverAdId(adId);
+        }
+    };
+    
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setDragOverAdId(null);
+    };
+
+    const handleDrop = (e: React.DragEvent, dropAdId: string) => {
+        e.preventDefault();
+        if (!draggedAdId || draggedAdId === dropAdId) {
+            setDraggedAdId(null);
+            setDragOverAdId(null);
+            return;
+        }
+
+        const draggedIndex = selectedAdIds.findIndex(id => id === draggedAdId);
+        const dropIndex = selectedAdIds.findIndex(id => id === dropAdId);
+
+        if (draggedIndex === -1 || dropIndex === -1) return;
+
+        const newAdIds = [...selectedAdIds];
+        const [removed] = newAdIds.splice(draggedIndex, 1);
+        newAdIds.splice(dropIndex, 0, removed);
+        
+        setSelectedAdIds(newAdIds);
+        setDraggedAdId(null);
+        setDragOverAdId(null);
+    };
+
+    const handleDragEnd = () => {
+        setDraggedAdId(null);
+        setDragOverAdId(null);
+    };
+
+
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold font-headline">{playlist.name}</h1>
-                    <p className="text-muted-foreground">Select ads from the library to build your playlist.</p>
+                    <p className="text-muted-foreground">Select ads from the library, then drag to reorder them.</p>
                 </div>
                 <Button onClick={handleSave} disabled={isPending}>
                     {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -124,12 +177,24 @@ export function PlaylistEditorClient({ initialPlaylist, allAds }: PlaylistEditor
                     <CardHeader>
                         <CardTitle>Current Playlist ({playlistAds.length})</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent onDragLeave={handleDragLeave}>
                         <ScrollArea className="h-[60vh] pr-4">
                             {playlistAds.length > 0 ? (
                                 <div className="space-y-2">
-                                    {playlistAds.map(ad => (
-                                        <div key={ad.id} className="flex items-center gap-2 p-2 rounded-md bg-background border">
+                                    {playlistAds.map((ad) => (
+                                        <div 
+                                            key={ad.id} 
+                                            draggable
+                                            onDragStart={() => handleDragStart(ad.id)}
+                                            onDragOver={(e) => handleDragOver(e, ad.id)}
+                                            onDrop={(e) => handleDrop(e, ad.id)}
+                                            onDragEnd={handleDragEnd}
+                                            className={cn(
+                                                "flex items-center gap-2 p-2 rounded-md bg-background border cursor-grab transition-all",
+                                                draggedAdId === ad.id && "opacity-50",
+                                                dragOverAdId === ad.id && draggedAdId !== ad.id && "border-primary ring-2 ring-primary"
+                                            )}
+                                        >
                                             <GripVertical className="h-5 w-5 text-muted-foreground" />
                                             {ad.type === 'image' ? <FileImage className="h-5 w-5 text-primary" /> : <Video className="h-5 w-5 text-primary" />}
                                             <span className="flex-1 text-sm truncate font-medium">{ad.name}</span>
