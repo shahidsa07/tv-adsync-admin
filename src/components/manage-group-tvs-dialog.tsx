@@ -9,7 +9,7 @@ import { Label } from "./ui/label";
 import { ScrollArea } from "./ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { updateGroupTvsAction } from "@/lib/actions";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Search, Store } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Input } from "./ui/input";
 
@@ -53,9 +53,13 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
   };
 
   const filteredTvs = useMemo(() => {
+    const lowercasedTerm = searchTerm.toLowerCase();
     return allTvs
       .filter(tv => tv.groupId === null || tv.groupId === group.id)
-      .filter(tv => tv.name.toLowerCase().includes(searchTerm.toLowerCase()));
+      .filter(tv => 
+          tv.name.toLowerCase().includes(lowercasedTerm) ||
+          tv.shopLocation?.toLowerCase().includes(lowercasedTerm)
+      );
   }, [allTvs, group.id, searchTerm]);
 
   return (
@@ -64,14 +68,14 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
         <DialogHeader>
           <DialogTitle className="font-headline">Manage TVs for {group.name}</DialogTitle>
           <DialogDescription>
-            Select which TVs should be part of this group. Only TVs not in another group are shown.
+            Select which TVs should be part of this group. Only available (unassigned) TVs and TVs already in this group are shown.
           </DialogDescription>
         </DialogHeader>
         
         <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-                placeholder="Search for a TV..."
+                placeholder="Search by name or location..."
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
                 className="pl-9"
@@ -82,22 +86,31 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
           <div className="space-y-4 p-4">
             {filteredTvs.length > 0 ? filteredTvs.map(tv => (
                     <div key={tv.tvId} className="flex items-center justify-between rounded-lg border p-3">
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-start gap-3">
                             <Checkbox
                                 id={`tv-${tv.tvId}`}
                                 checked={selectedTvIds.includes(tv.tvId)}
                                 onCheckedChange={() => handleTvToggle(tv.tvId)}
+                                className="mt-1"
                             />
-                            <Label htmlFor={`tv-${tv.tvId}`} className="font-medium cursor-pointer">
-                                {tv.name}
-                            </Label>
+                            <div className="grid gap-0.5">
+                                <Label htmlFor={`tv-${tv.tvId}`} className="font-medium cursor-pointer leading-none">
+                                    {tv.name}
+                                </Label>
+                                {tv.shopLocation && (
+                                    <div className="flex items-center text-xs text-muted-foreground">
+                                        <Store className="mr-1.5 h-3 w-3" />
+                                        <span>{tv.shopLocation}</span>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                         <Badge variant={tv.socketId ? 'default' : 'secondary'} className={tv.socketId ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}>
                           {tv.socketId ? 'Online' : 'Offline'}
                         </Badge>
                     </div>
             )) : (
-              <p className="text-center text-muted-foreground pt-4">No TVs found matching your search.</p>
+              <p className="text-center text-muted-foreground pt-4">No available TVs match your search.</p>
             )}
           </div>
         </ScrollArea>
