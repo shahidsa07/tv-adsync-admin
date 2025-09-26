@@ -43,12 +43,16 @@ export function AssignGroupDialog({ open, onOpenChange, tv, groups }: AssignGrou
 
   useEffect(() => {
     if (open) {
+      // Set the currently assigned group if there is one
+      setSelectedGroup(tv.groupId ?? '');
+      // Fetch a new suggestion
       fetchSuggestion();
     } else {
+      // Reset state when closing
       setSuggestion(null);
       setSelectedGroup('');
     }
-  }, [open, fetchSuggestion]);
+  }, [open, tv.groupId, fetchSuggestion]);
 
   const handleSubmit = () => {
     if (!selectedGroup) {
@@ -72,7 +76,7 @@ export function AssignGroupDialog({ open, onOpenChange, tv, groups }: AssignGrou
         <DialogHeader>
           <DialogTitle className="font-headline">Assign Group for <span className="text-primary">{tv.name}</span></DialogTitle>
           <DialogDescription>
-            Use our AI assistant to suggest a group or manually select one.
+            Use our AI assistant to suggest a group or manually select one from the list.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
