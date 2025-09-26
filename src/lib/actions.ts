@@ -228,9 +228,9 @@ export async function stopPriorityStreamAction(groupId: string) {
 
 // --- Ad & Playlist Actions ---
 
-export async function createAdAction(name: string, type: 'image' | 'video', url: string, duration?: number) {
+export async function createAdAction(name: string, type: 'image' | 'video', url: string, duration?: number, tags?: string[]) {
     try {
-        await data.createAd(name, type, url, duration);
+        await data.createAd(name, type, url, duration, tags);
         revalidatePath('/ads');
         revalidatePath('/playlists', 'layout'); // Revalidate all playlist pages
         return { success: true, message: 'Ad created successfully.' };
@@ -240,7 +240,7 @@ export async function createAdAction(name: string, type: 'image' | 'video', url:
     }
 }
 
-export async function updateAdAction(adId: string, adData: Partial<Pick<Ad, 'name' | 'type' | 'url' | 'duration'>>) {
+export async function updateAdAction(adId: string, adData: Partial<Pick<Ad, 'name' | 'type' | 'url' | 'duration' | 'tags'>>) {
     try {
         await data.updateAd(adId, adData);
 

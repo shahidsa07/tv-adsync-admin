@@ -159,10 +159,10 @@ export const updatePriorityStream = async (groupId: string, stream: PriorityStre
 };
 
 // Ad Mutations
-export const createAd = async (name: string, type: 'image' | 'video', url: string, duration?: number): Promise<Ad | undefined> => {
+export const createAd = async (name: string, type: 'image' | 'video', url: string, duration?: number, tags?: string[]): Promise<Ad | undefined> => {
     if (!db) return undefined;
     const id = `ad-${Date.now()}`;
-    const newAd: Ad = { id, name, type, url };
+    const newAd: Ad = { id, name, type, url, tags: tags || [] };
     if (type === 'image' && duration) {
         newAd.duration = duration;
     }
@@ -170,7 +170,7 @@ export const createAd = async (name: string, type: 'image' | 'video', url: strin
     return newAd;
 };
 
-export const updateAd = async (adId: string, data: Partial<Pick<Ad, 'name' | 'type' | 'url' | 'duration'>>): Promise<Ad | undefined> => {
+export const updateAd = async (adId: string, data: Partial<Pick<Ad, 'name' | 'type' | 'url' | 'duration' | 'tags'>>): Promise<Ad | undefined> => {
     if (!db) return undefined;
     const docRef = db.collection("ads").doc(adId);
     

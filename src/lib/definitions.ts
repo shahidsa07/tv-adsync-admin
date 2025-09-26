@@ -4,6 +4,7 @@ export interface Ad {
   type: 'image' | 'video';
   url: string;
   duration?: number; // Only for images
+  tags?: string[];
 }
 
 export interface Playlist {

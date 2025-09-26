@@ -23,6 +23,7 @@ export function EditAdDialog({ open, onOpenChange, ad }: EditAdDialogProps) {
   const [url, setUrl] = useState(ad.url);
   const [type, setType] = useState<'image' | 'video'>(ad.type);
   const [duration, setDuration] = useState(ad.duration || 15);
+  const [tags, setTags] = useState(ad.tags?.join(', ') || '');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const router = useRouter();
@@ -32,6 +33,7 @@ export function EditAdDialog({ open, onOpenChange, ad }: EditAdDialogProps) {
     setUrl(ad.url);
     setType(ad.type);
     setDuration(ad.duration || 15);
+    setTags(ad.tags?.join(', ') || '');
   }, [ad]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -42,7 +44,8 @@ export function EditAdDialog({ open, onOpenChange, ad }: EditAdDialogProps) {
     }
     
     startTransition(async () => {
-      const adData: Partial<Ad> = { name, url, type };
+      const tagArray = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      const adData: Partial<Ad> = { name, url, type, tags: tagArray };
       if (type === 'image') {
           adData.duration = duration;
       }
@@ -96,6 +99,10 @@ export function EditAdDialog({ open, onOpenChange, ad }: EditAdDialogProps) {
                     <Input id="duration" type="number" value={duration} onChange={e => setDuration(parseInt(e.target.value) || 0)} placeholder="15" required />
                 </div>
             )}
+             <div className="space-y-2">
+                <Label htmlFor="tags">Tags (comma-separated)</Label>
+                <Input id="tags" value={tags} onChange={e => setTags(e.target.value)} placeholder="e.g., sale, summer, fashion" />
+            </div>
           </div>
           <DialogFooter>
              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>

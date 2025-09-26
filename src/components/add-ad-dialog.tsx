@@ -20,6 +20,7 @@ export function AddAdDialog({ open, onOpenChange }: AddAdDialogProps) {
   const [url, setUrl] = useState('');
   const [type, setType] = useState<'image' | 'video'>('image');
   const [duration, setDuration] = useState(15);
+  const [tags, setTags] = useState('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
 
@@ -31,13 +32,15 @@ export function AddAdDialog({ open, onOpenChange }: AddAdDialogProps) {
     }
     
     startTransition(async () => {
-      const result = await createAdAction(name, type, url, type === 'image' ? duration : undefined);
+      const tagArray = tags.split(',').map(tag => tag.trim()).filter(Boolean);
+      const result = await createAdAction(name, type, url, type === 'image' ? duration : undefined, tagArray);
       if (result.success) {
         toast({ title: 'Success', description: result.message });
         setName('');
         setUrl('');
         setType('image');
         setDuration(15);
+        setTags('');
         onOpenChange(false);
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
@@ -83,6 +86,10 @@ export function AddAdDialog({ open, onOpenChange }: AddAdDialogProps) {
                     <Input id="duration" type="number" value={duration} onChange={e => setDuration(parseInt(e.target.value) || 0)} placeholder="15" required />
                 </div>
             )}
+             <div className="space-y-2">
+                <Label htmlFor="tags">Tags (comma-separated)</Label>
+                <Input id="tags" value={tags} onChange={e => setTags(e.target.value)} placeholder="e.g., sale, summer, fashion" />
+            </div>
           </div>
           <DialogFooter>
              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
