@@ -26,13 +26,18 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
 
+  const currentlyAssignedIds = useMemo(() => 
+    allTvs.filter(tv => tv.groupId === group.id).map(tv => tv.tvId),
+    [allTvs, group.id]
+  );
+
   useEffect(() => {
     if (open) {
-      const currentTvIds = allTvs.filter(tv => tv.groupId === group.id).map(tv => tv.tvId);
-      setSelectedTvIds(currentTvIds);
+      // We start with only the currently assigned TVs selected.
+      setSelectedTvIds(currentlyAssignedIds);
       setSearchTerm("");
     }
-  }, [open, group.id, allTvs]);
+  }, [open, currentlyAssignedIds]);
 
   const handleTvToggle = (tvId: string) => {
     setSelectedTvIds(prev =>
@@ -42,6 +47,8 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
 
   const handleSubmit = () => {
     startTransition(async () => {
+      // The final list of IDs for the group is the list of TVs that were *already* in the group,
+      // plus the newly selected ones from the unassigned list.
       const result = await updateGroupTvsAction(group.id, selectedTvIds);
       if (result.success) {
         toast({ title: "Success", description: result.message });
@@ -54,21 +61,22 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
 
   const filteredTvs = useMemo(() => {
     const lowercasedTerm = searchTerm.toLowerCase();
+    // Only show TVs that are not assigned to any group
     return allTvs
-      .filter(tv => tv.groupId === null || tv.groupId === group.id)
+      .filter(tv => tv.groupId === null)
       .filter(tv => 
           tv.name.toLowerCase().includes(lowercasedTerm) ||
-          tv.shopLocation?.toLowerCase().includes(lowercasedTerm)
+          (tv.shopLocation && tv.shopLocation.toLowerCase().includes(lowercasedTerm))
       );
-  }, [allTvs, group.id, searchTerm]);
+  }, [allTvs, searchTerm]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-headline">Manage TVs for {group.name}</DialogTitle>
+          <DialogTitle className="font-headline">Add TVs to {group.name}</DialogTitle>
           <DialogDescription>
-            Select which TVs should be part of this group. Only available (unassigned) TVs and TVs already in this group are shown.
+            Select available (unassigned) TVs to add to this group.
           </DialogDescription>
         </DialogHeader>
         
