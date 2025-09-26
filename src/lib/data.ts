@@ -70,14 +70,17 @@ export const getPlaylistsContainingAd = async(adId: string): Promise<Playlist[]>
 // --- MUTATIONS ---
 
 // TV Mutations
-export const createTv = async (tvId: string, name: string): Promise<TV | undefined> => {
+export const createTv = async (tvId: string, name: string, shopLocation?: string): Promise<TV | undefined> => {
   if (!db) return undefined;
   const newTv: TV = { tvId, name: name || tvId, groupId: null, socketId: null };
+  if (shopLocation) {
+    newTv.shopLocation = shopLocation;
+  }
   await db.collection("tvs").doc(tvId).set(newTv);
   return newTv;
 };
 
-export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'groupId'>>): Promise<TV | undefined> => {
+export const updateTv = async (tvId: string, data: Partial<Pick<TV, 'name' | 'groupId' | 'shopLocation'>>): Promise<TV | undefined> => {
   if (!db) return undefined;
   const docRef = db.collection("tvs").doc(tvId);
   await docRef.update(data);

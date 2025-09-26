@@ -56,6 +56,7 @@ interface AddTvDialogProps {
 export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
   const [tvId, setTvId] = useState('');
   const [tvName, setTvName] = useState('');
+  const [shopLocation, setShopLocation] = useState('');
   const [isPending, startTransition] = useTransition();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("manual");
@@ -93,7 +94,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
     onOpenChange(isOpen);
   }
 
-  const handleRegister = (id: string, name: string) => {
+  const handleRegister = (id: string, name: string, location?: string) => {
     if (!id || !id.trim()) {
       toast({ variant: 'destructive', title: 'Error', description: 'TV ID cannot be empty.' });
       return;
@@ -103,11 +104,12 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
       return;
     }
     startTransition(async () => {
-      const result = await registerTvAction(id.trim(), name.trim());
+      const result = await registerTvAction(id.trim(), name.trim(), location?.trim());
       if (result.success) {
         toast({ title: 'Success', description: result.message });
         setTvId('');
         setTvName('');
+        setShopLocation('');
         onOpenChange(false);
       } else {
         toast({ variant: 'destructive', title: 'Error', description: result.message });
@@ -117,7 +119,7 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    handleRegister(tvId, tvName);
+    handleRegister(tvId, tvName, shopLocation);
   };
   
   return (
@@ -162,6 +164,17 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
                                 required
                             />
                         </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="shopLocationManual" className="text-left">
+                                Shop Location (Optional)
+                            </Label>
+                            <Input
+                                id="shopLocationManual"
+                                value={shopLocation}
+                                onChange={(e) => setShopLocation(e.target.value)}
+                                placeholder="e.g., Main Street Store"
+                            />
+                        </div>
                         <DialogFooter>
                             <Button type="submit" disabled={isPending} className='w-full'>
                                 {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
@@ -201,6 +214,17 @@ export function AddTvDialog({ open, onOpenChange }: AddTvDialogProps) {
                             onChange={(e) => setTvId(e.target.value)}
                             placeholder="Scan QR code to populate"
                             className="bg-muted"
+                        />
+                    </div>
+                     <div className="space-y-2">
+                        <Label htmlFor="shopLocationQr">
+                            Shop Location (Optional)
+                        </Label>
+                        <Input
+                            id="shopLocationQr"
+                            value={shopLocation}
+                            onChange={(e) => setShopLocation(e.target.value)}
+                            placeholder="e.g., Main Street Store"
                         />
                     </div>
                     <DialogFooter>

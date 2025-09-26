@@ -21,7 +21,8 @@ export interface TV {
   tvId: string;
   name: string;
   groupId: string | null;
-  socketId: string | null; 
+  socketId: string | null;
+  shopLocation?: string;
 }
 
 export interface Group {

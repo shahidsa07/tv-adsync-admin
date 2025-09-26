@@ -81,7 +81,7 @@ export async function forceRefreshGroupAction(groupId: string) {
 
 // --- TV Actions ---
 
-export async function registerTvAction(tvId: string, name: string) {
+export async function registerTvAction(tvId: string, name: string, shopLocation?: string) {
     try {
         // Sanitize the TV ID to make it Firestore-safe
         const sanitizedTvId = tvId.trim().replace(/\//g, '_');
@@ -95,7 +95,7 @@ export async function registerTvAction(tvId: string, name: string) {
             return { success: false, message: 'A TV with this ID is already registered.' };
         }
 
-        await data.createTv(sanitizedTvId, name);
+        await data.createTv(sanitizedTvId, name, shopLocation);
         
         // Notify the websocket server to update the status if the TV is already connected
         notifyTv(sanitizedTvId);
@@ -108,17 +108,18 @@ export async function registerTvAction(tvId: string, name: string) {
     }
 }
 
-export async function updateTvNameAction(tvId: string, name: string) {
-  try {
-    await data.updateTv(tvId, { name });
-    notifyTv(tvId);
-    revalidatePath('/', 'layout');
-    return { success: true, message: `TV name updated to "${name}".` }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to update TV name."
-    return { success: false, message }
-  }
+export async function updateTvAction(tvId: string, tvData: Partial<Pick<TV, 'name' | 'shopLocation'>>) {
+    try {
+        await data.updateTv(tvId, tvData);
+        notifyTv(tvId);
+        revalidatePath('/', 'layout');
+        return { success: true, message: `TV details updated.` };
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "Failed to update TV."
+        return { success: false, message }
+    }
 }
+
 
 export async function assignTvToGroupAction(tvId: string, groupId: string | null) {
   try {
