@@ -86,18 +86,18 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
             ) : (
                 <div className="w-full flex gap-2">
                     {!group && (
-                        <Button className="flex-1 bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
+                        <Button className="flex-grow bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
                         Assign Group
                         <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
                     )}
-                     <Button variant="outline" className="flex-1" onClick={() => setIsEditing(true)}>
+                     <Button variant="outline" onClick={() => setIsEditing(true)}>
                         <Pencil className="mr-2 h-4 w-4" />
                         Edit
                     </Button>
                     <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className='flex-1'>
+                        <Button variant="destructive">
                         <Trash2 className="mr-2 h-4 w-4" />
                         Delete
                         </Button>
