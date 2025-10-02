@@ -1,3 +1,4 @@
+
 import { config } from 'dotenv';
 config(); // Load environment variables from .env file
 
@@ -73,7 +74,7 @@ const sendRefreshToTv = async (tvId: string) => {
              // Mark as online
             if (tvDoc.socketId === null) {
                 console.log(`TV ${tvId} is now registered and connected, marking as online.`);
-                await handleTvConnection(tvId, true);
+                await handleTvConnection(tvId, true, ws);
             }
             console.log(`Sending REFRESH_STATE to ${tvId}`);
             ws.send(JSON.stringify({ type: 'REFRESH_STATE' }));
@@ -85,7 +86,7 @@ const sendRefreshToTv = async (tvId: string) => {
     }
 };
 
-const handleTvConnection = async (tvId: string, isConnecting: boolean) => {
+const handleTvConnection = async (tvId: string, isConnecting: boolean, ws: WebSocket) => {
     const socketId = isConnecting ? `ws-${Date.now()}` : null;
     try {
         await setTvOnlineStatus(tvId, isConnecting, socketId);
@@ -128,7 +129,7 @@ wss.on('connection', (ws) => {
 
                     const tvDoc = await getTvById(clientId);
                     if (tvDoc) {
-                        await handleTvConnection(clientId, true);
+                        await handleTvConnection(clientId, true, ws);
                     } else {
                         console.log(`TV is not registered yet. Connection is pending registration for: ${clientId}`);
                     }
@@ -150,7 +151,7 @@ wss.on('connection', (ws) => {
             console.log(`TV client disconnected: ${clientId}`);
             if (tvConnections.get(clientId) === ws) {
                 tvConnections.delete(clientId);
-                await handleTvConnection(clientId, false);
+                await handleTvConnection(clientId, false, ws);
             }
         } else {
             console.log('An unidentified client disconnected');
