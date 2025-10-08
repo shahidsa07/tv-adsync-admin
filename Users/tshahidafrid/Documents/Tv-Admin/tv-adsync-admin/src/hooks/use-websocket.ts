@@ -8,8 +8,11 @@ export function useWebSocket() {
   const router = useRouter();
 
   useEffect(() => {
-    // Determine the WebSocket protocol
+    if (typeof window === 'undefined') return;
+
+    // Determine the WebSocket protocol based on the window's protocol
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    
     // Use the same hostname as the current window, but with port 8080
     const wsHost = `${wsProtocol}//${window.location.hostname}:8080`;
     
@@ -18,7 +21,7 @@ export function useWebSocket() {
     try {
         ws = new WebSocket(wsHost);
     } catch(e) {
-        console.error("Could not connect to websocket server", e);
+        console.error("Could not create WebSocket connection to server", e);
         return;
     }
 
