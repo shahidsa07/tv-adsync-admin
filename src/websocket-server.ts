@@ -3,19 +3,39 @@ import { config } from 'dotenv';
 config(); // Load environment variables from .env file
 
 import { WebSocketServer, WebSocket } from 'ws';
-import { createServer } from 'https';
+import { createServer as createHttpServer } from 'http';
+import { createServer as createHttpsServer } from 'https';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getTvById, setTvOnlineStatus, getTvsByGroupId } from './lib/data';
 import chokidar from 'chokidar';
 
 const PORT = 8080;
+const HOST = '0.0.0.0'; // Listen on all network interfaces
 
-// Create an HTTPS server
-const server = createServer({
-  cert: fs.readFileSync(path.join(process.cwd(), 'cert.pem')),
-  key: fs.readFileSync(path.join(process.cwd(), 'key.pem')),
-});
+const isProduction = process.env.NODE_ENV === 'production';
+let server: import('http').Server | import('https').Server;
+
+if (isProduction) {
+    console.log('Starting WebSocket server in PRODUCTION mode (wss://)');
+    // In production, create a secure HTTPS server
+    const certPath = path.join(process.cwd(), 'cert.pem');
+    const keyPath = path.join(process.cwd(), 'key.pem');
+
+    if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
+        console.error('SSL certificate or key not found. Place cert.pem and key.pem in the root directory for production.');
+        process.exit(1);
+    }
+
+    server = createHttpsServer({
+        cert: fs.readFileSync(certPath),
+        key: fs.readFileSync(keyPath),
+    });
+} else {
+    console.log('Starting WebSocket server in DEVELOPMENT mode (ws://)');
+    // In development, create a standard HTTP server
+    server = createHttpServer();
+}
 
 const wss = new WebSocketServer({ server });
 
@@ -24,8 +44,6 @@ const tvConnections = new Map<string, WebSocket>();
 const adminConnections = new Set<WebSocket>();
 
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
-
-console.log(`WebSocket server started on wss://localhost:${PORT}`);
 
 // Function to broadcast messages to all admin clients
 const broadcastToAdmins = (message: object) => {
@@ -171,6 +189,9 @@ wss.on('connection', (ws) => {
     });
 });
 
-server.listen(PORT);
+server.listen(PORT, HOST, () => {
+    const protocol = isProduction ? 'wss' : 'ws';
+    console.log(`WebSocket server started on ${protocol}://${HOST}:${PORT}`);
+});
 
 setupNotificationWatcher();
