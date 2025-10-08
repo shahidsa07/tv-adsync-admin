@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect } from 'react';
@@ -12,7 +13,15 @@ export function useWebSocket() {
     // Use the same hostname as the current window, but with port 8080
     const wsHost = `${wsProtocol}//${window.location.hostname}:8080`;
     
-    const ws = new WebSocket(wsHost);
+    let ws: WebSocket;
+
+    try {
+        ws = new WebSocket(wsHost);
+    } catch(e) {
+        console.error("Could not connect to websocket server", e);
+        return;
+    }
+
 
     ws.onopen = () => {
       console.log('Admin WebSocket connection established');
@@ -45,7 +54,9 @@ export function useWebSocket() {
 
     // Cleanup the connection when the component unmounts
     return () => {
-      ws.close();
+      if (ws) {
+        ws.close();
+      }
     };
   }, [router]); // router is a stable dependency
 }

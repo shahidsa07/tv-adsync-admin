@@ -3,13 +3,21 @@ import { config } from 'dotenv';
 config(); // Load environment variables from .env file
 
 import { WebSocketServer, WebSocket } from 'ws';
+import { createServer } from 'https';
+import * as fs from 'fs';
+import * as path from 'path';
 import { getTvById, setTvOnlineStatus, getTvsByGroupId } from './lib/data';
 import chokidar from 'chokidar';
-import fs from 'fs/promises';
-import path from 'path';
 
 const PORT = 8080;
-const wss = new WebSocketServer({ port: PORT });
+
+// Create an HTTPS server
+const server = createServer({
+  cert: fs.readFileSync(path.join(process.cwd(), 'cert.pem')),
+  key: fs.readFileSync(path.join(process.cwd(), 'key.pem')),
+});
+
+const wss = new WebSocketServer({ server });
 
 // Separate maps for different client types
 const tvConnections = new Map<string, WebSocket>();
@@ -17,7 +25,7 @@ const adminConnections = new Set<WebSocket>();
 
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
-console.log(`WebSocket server started on ws://localhost:${PORT}`);
+console.log(`WebSocket server started on wss://localhost:${PORT}`);
 
 // Function to broadcast messages to all admin clients
 const broadcastToAdmins = (message: object) => {
@@ -31,7 +39,7 @@ const broadcastToAdmins = (message: object) => {
 
 const setupNotificationWatcher = async () => {
     try {
-        await fs.mkdir(NOTIFICATION_DIR, { recursive: true });
+        await fs.promises.mkdir(NOTIFICATION_DIR, { recursive: true });
         console.log(`Watching for notifications in: ${NOTIFICATION_DIR}`);
         const watcher = chokidar.watch(NOTIFICATION_DIR, {
             ignored: /^\./,
@@ -41,7 +49,7 @@ const setupNotificationWatcher = async () => {
 
         watcher.on('add', async (filePath) => {
             try {
-                const content = await fs.readFile(filePath, 'utf-8');
+                const content = await fs.promises.readFile(filePath, 'utf-8');
                 const notification = JSON.parse(content);
                 console.log('Processing notification:', notification);
                 
@@ -53,7 +61,7 @@ const setupNotificationWatcher = async () => {
                 }
 
                 // Clean up the notification file
-                await fs.unlink(filePath);
+                await fs.promises.unlink(filePath);
 
             } catch (error) {
                 console.error(`Error processing notification file ${filePath}:`, error);
@@ -162,5 +170,7 @@ wss.on('connection', (ws) => {
         console.error('WebSocket error:', error);
     });
 });
+
+server.listen(PORT);
 
 setupNotificationWatcher();
