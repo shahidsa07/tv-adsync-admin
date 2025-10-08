@@ -191,7 +191,9 @@ wss.on('connection', (ws) => {
 
 server.listen(PORT, HOST, () => {
     const protocol = isProduction ? 'wss' : 'ws';
-    console.log(`WebSocket server started on ${protocol}://${HOST}:${PORT}`);
+    console.log(`WebSocket server started and listening on ${HOST}:${PORT}`);
+    console.log(`Clients on the same machine can connect to: ${protocol}://localhost:${PORT}`);
+    console.log(`Remote clients (like your TV) must connect to this machine's local network IP address (e.g., ${protocol}://192.168.1.100:${PORT})`);
 });
 
 setupNotificationWatcher();
