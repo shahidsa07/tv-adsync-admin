@@ -8,8 +8,9 @@
     "ws:start": "node dist/websocket-server.js",
     "genkit:start": "genkit start -- tsx src/ai/dev.ts",
     "genkit:dev": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build",
-    "start": "next start",
+    "build:server": "tsc --project tsconfig-server.json",
+    "build": "npm run build:server && next build",
+    "start": "npm run ws:start & next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
