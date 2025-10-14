@@ -174,8 +174,10 @@ wss.on('connection', (ws) => {
             console.log('Admin client disconnected');
         } else if (clientType === 'tv' && clientId) {
             console.log(`TV client disconnected: ${clientId}`);
+            // Check if this specific websocket instance is the one we have stored for the client
             if (tvConnections.get(clientId) === ws) {
                 tvConnections.delete(clientId);
+                // Now clientId is guaranteed to be a string
                 await handleTvConnection(clientId, false, ws);
             }
         } else {
@@ -190,7 +192,8 @@ wss.on('connection', (ws) => {
 
 server.listen(PORT, () => {
     const protocol = isProduction ? 'wss' : 'ws';
-    console.log(`WebSocket server started on ${protocol}://<host>:${PORT}`);
+    const host = isProduction ? '0.0.0.0' : 'localhost';
+    console.log(`WebSocket server started on ${protocol}://${host}:${PORT}`);
     if (!isProduction) {
         console.log('Listening on all network interfaces. Use your computer\'s local IP for client connections.');
     } else {
