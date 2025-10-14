@@ -11,7 +11,6 @@ import { getTvById, setTvOnlineStatus, getTvsByGroupId } from './lib/data';
 import chokidar from 'chokidar';
 
 const PORT = 8080;
-const HOST = '0.0.0.0'; // Listen on all network interfaces
 
 const isProduction = process.env.NODE_ENV === 'production';
 let server: import('http').Server | import('https').Server;
@@ -23,7 +22,7 @@ if (isProduction) {
     const keyPath = path.join(process.cwd(), 'key.pem');
 
     if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
-        console.error('SSL certificate or key not found. Place cert.pem and key.pem in the root directory for production.');
+        console.error('SSL certificate or key not found for production. Ensure cert.pem and key.pem are in the root directory.');
         process.exit(1);
     }
 
@@ -189,11 +188,14 @@ wss.on('connection', (ws) => {
     });
 });
 
-server.listen(PORT, HOST, () => {
+server.listen(PORT, () => {
     const protocol = isProduction ? 'wss' : 'ws';
-    console.log(`WebSocket server started and listening on ${HOST}:${PORT}`);
-    console.log(`Clients on the same machine can connect to: ${protocol}://localhost:${PORT}`);
-    console.log(`Remote clients (like your TV) must connect to this machine's local network IP address (e.g., ${protocol}://192.168.1.100:${PORT})`);
+    console.log(`WebSocket server started on ${protocol}://<host>:${PORT}`);
+    if (!isProduction) {
+        console.log('Listening on all network interfaces. Use your computer\'s local IP for client connections.');
+    } else {
+        console.log('Running in production mode.');
+    }
 });
 
 setupNotificationWatcher();
