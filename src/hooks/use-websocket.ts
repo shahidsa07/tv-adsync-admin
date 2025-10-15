@@ -16,7 +16,7 @@ const connect = (router: any) => {
     if (typeof window === 'undefined') return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // The WebSocket now connects to the same host and port as the main application.
+    // The WebSocket now connects to the same host and port as the main application, but on the /ws path.
     const websocketUrl = `${protocol}//${window.location.host}${WEBSOCKET_PATH}`;
     
     console.log(`Attempting to connect to WebSocket at ${websocketUrl}`);
@@ -50,6 +50,7 @@ const connect = (router: any) => {
     ws.onclose = (event) => {
       console.log('Admin WebSocket connection closed:', event.code, event.reason);
       ws = null;
+      // Reconnect after a delay
       setTimeout(() => connect(router), 5000);
     };
 
