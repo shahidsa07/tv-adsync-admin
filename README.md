@@ -43,25 +43,17 @@ The application uses Firebase and requires service account credentials to connec
 
 ### 4. Run the Application
 
-This project requires two separate processes to be run in two separate terminal windows.
+Start the Next.js development server. This single command runs both the web application and the integrated WebSocket server.
 
-- **Terminal 1: Start the Next.js Web App**
-  This command starts the main web interface on `http://localhost:9002`.
+```bash
+npm run dev
+```
 
-  ```bash
-  npm run dev
-  ```
-
-- **Terminal 2: Start the WebSocket Server**
-  This command starts the WebSocket server on `ws://localhost:8080`, which handles real-time updates for TV clients.
-
-  ```bash
-  npm run ws:dev
-  ```
+The application will be available at `http://localhost:9002`.
 
 ### 5. Access the Application
 
-Once both servers are running, open your web browser and navigate to:
+Once the server is running, open your web browser and navigate to:
 
 [http://localhost:9002](http://localhost:9002)
 
