@@ -5,6 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 let ws: WebSocket | null = null;
+const WEBSOCKET_URL = 'ws://localhost:9003';
 
 const connect = (router: any) => {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -13,14 +14,11 @@ const connect = (router: any) => {
     }
     
     if (typeof window === 'undefined') return;
-
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = `${wsProtocol}//${window.location.host}/api/ws`;
     
-    console.log(`Attempting to connect to WebSocket at ${wsHost}`);
+    console.log(`Attempting to connect to WebSocket at ${WEBSOCKET_URL}`);
 
     try {
-        ws = new WebSocket(wsHost);
+        ws = new WebSocket(WEBSOCKET_URL);
     } catch(e) {
         console.error("Could not create WebSocket connection to server", e);
         return;
@@ -62,7 +60,10 @@ export function useWebSocket() {
   const router = useRouter();
 
   useEffect(() => {
-    connect(router);
+    // Ensure this only runs on the client
+    if (typeof window !== 'undefined') {
+      connect(router);
+    }
 
     // No cleanup function, we want it to persist and reconnect
   }, [router]); 
