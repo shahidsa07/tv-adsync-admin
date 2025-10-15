@@ -1,13 +1,15 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import type { TV, Playlist, PriorityStream } from '@/lib/definitions';
 import { Loader2, Tv, WifiOff } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
+
+export const dynamic = 'force-dynamic';
 
 interface TvState {
   tvId: string;
@@ -20,7 +22,7 @@ interface TvState {
 const POLLING_INTERVAL = 15000; // 15 seconds
 const WEBSOCKET_RECONNECT_INTERVAL = 5000; // 5 seconds
 
-export default function TVPlayerPage() {
+function TVPlayer() {
   const searchParams = useSearchParams();
   const tvId = searchParams.get('tvId');
   const [state, setState] = useState<TvState | null>(null);
@@ -279,3 +281,10 @@ export default function TVPlayerPage() {
   );
 }
 
+export default function TVPlayerPage() {
+  return (
+    <Suspense fallback={<div className="fixed inset-0 flex flex-col items-center justify-center bg-gray-900 text-white"><Loader2 className="animate-spin h-12 w-12 mb-4"/>Loading...</div>}>
+      <TVPlayer />
+    </Suspense>
+  );
+}
