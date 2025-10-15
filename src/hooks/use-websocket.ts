@@ -10,9 +10,10 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
+    const isProduction = process.env.NODE_ENV === 'production';
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Connect to the Next.js API route proxy
-    const wsUrl = `${wsProtocol}//${window.location.hostname}:9001`;
+    const wsHost = isProduction ? window.location.hostname : 'localhost:9001';
+    const wsUrl = `${wsProtocol}//${wsHost}`;
     
     let ws: WebSocket;
 
