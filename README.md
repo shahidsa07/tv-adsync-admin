@@ -43,9 +43,7 @@ The application uses Firebase and requires service account credentials to connec
 
 ### 4. Run the Application
 
-Start the development servers. The `npm run dev` command now starts two processes in parallel:
-1.  The Next.js web application.
-2.  The WebSocket server for real-time communication.
+Start the development server. The `npm run dev` command starts a single server process that handles both the Next.js application and the WebSocket connections.
 
 ```bash
 npm run dev
@@ -54,6 +52,6 @@ npm run dev
 ### 5. Access the Application
 
 - **Web Application**: Available at `http://localhost:9002`
-- **WebSocket Server**: Listens on `ws://localhost:9003`
+- **WebSocket Server**: Listens on `ws://localhost:9002` (the server handles this automatically)
 
 You should see the NextAds dashboard when you navigate to the web application URL. The initial data (TVs, groups, ads) will be seeded into your Firestore database the first time you visit one of the main pages.
