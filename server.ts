@@ -3,8 +3,9 @@ import { createServer } from 'http';
 import { parse } from 'url';
 import next from 'next';
 import { WebSocketServer } from 'ws';
-import { setTvOnlineStatus, getTvById } from './src/lib/data';
-import { setNotificationCallback, notifyAdmins } from './src/lib/ws-notifications';
+import { setTvOnlineStatus, getTvById, getTvsByGroupId } from './src/lib/data';
+import { getSubscriber } from './src/lib/redis';
+import type { Notification } from './src/lib/ws-notifications';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -12,21 +13,36 @@ const port = dev ? 9002 : 3000;
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
-// In-memory store for connections.
-// In production, consider a more robust solution like Redis.
 const tvConnections = new Map<string, import('ws')>();
 const adminConnections = new Set<import('ws')>();
 
 const handleTvConnection = async (tvId: string, isConnecting: boolean, socketId: string | null) => {
   try {
     await setTvOnlineStatus(tvId, isConnecting, socketId);
-    notifyAdmins();
+    // Admin notification is now handled via Redis Pub/Sub
   } catch (error) {
     console.error(`Error updating TV status for ${tvId}:`, error);
   }
 };
 
-app.prepare().then(() => {
+const sendToTv = (tvId: string, message: any) => {
+    const ws = tvConnections.get(tvId);
+    if (ws && ws.readyState === 1 /* OPEN */) {
+        console.log(`Sending message to TV: ${tvId}`);
+        ws.send(JSON.stringify(message));
+    }
+}
+
+const sendToAllAdmins = (message: any) => {
+    const messageString = JSON.stringify(message);
+    adminConnections.forEach(ws => {
+        if (ws.readyState === 1 /* OPEN */) {
+            ws.send(messageString);
+        }
+    });
+}
+
+app.prepare().then(async () => {
   const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url!, true);
@@ -40,28 +56,36 @@ app.prepare().then(() => {
 
   const wss = new WebSocketServer({ noServer: true });
 
-  setNotificationCallback((notification) => {
-    if (notification.type === 'tv') {
-        const ws = tvConnections.get(notification.id);
-        if (ws && ws.readyState === 1 /* OPEN */) {
-            console.log(`Sending REFRESH_STATE to TV: ${notification.id}`);
-            ws.send(JSON.stringify({ type: 'REFRESH_STATE' }));
-        }
-    } else if (notification.type === 'all-admins') {
-        const message = JSON.stringify({ type: 'refresh-request' });
-        adminConnections.forEach(ws => {
-            if (ws.readyState === 1 /* OPEN */) {
-                ws.send(message);
+  // --- Redis Subscriber Logic ---
+  try {
+    const subscriber = await getSubscriber();
+    await subscriber.subscribe('ws-notifications', async (message) => {
+        console.log('Redis subscriber received message:', message);
+        try {
+            const notification = JSON.parse(message) as Notification;
+
+            if (notification.type === 'tv') {
+                sendToTv(notification.id, { type: 'REFRESH_STATE' });
+            } else if (notification.type === 'group') {
+                const tvs = await getTvsByGroupId(notification.id);
+                tvs.forEach(tv => {
+                    sendToTv(tv.tvId, { type: 'REFRESH_STATE' });
+                });
+            } else if (notification.type === 'all-admins') {
+                sendToAllAdmins({ type: 'refresh-request' });
             }
-        });
-    }
-  });
+        } catch (e) {
+            console.error('Error processing Redis message:', e);
+        }
+    });
+    console.log('Subscribed to Redis channel: ws-notifications');
+  } catch (error) {
+      console.error('Could not connect to Redis or subscribe. Real-time notifications will not work.', error);
+  }
 
 
   server.on('upgrade', (request, socket, head) => {
     const { pathname } = parse(request.url!, true);
-
-    // This is now the single entry point for all WebSocket connections
     if (pathname === '/ws') {
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
