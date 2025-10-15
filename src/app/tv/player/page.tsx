@@ -33,9 +33,6 @@ function TVPlayer() {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const adStartTimeRef = useRef<number | null>(null);
 
-  const apiUrl = typeof window !== 'undefined' ? `${window.location.protocol}//${window.location.host}/api` : '';
-
-
   // --- Data Fetching and State Management ---
   const fetchState = async () => {
     if (!tvId) {
@@ -115,7 +112,7 @@ function TVPlayer() {
 
   const recordAdPlay = async (adId: string, duration: number) => {
     try {
-      await fetch(`${apiUrl}/analytics/record-play`, {
+      await fetch(`/api/analytics/record-play`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ adId, tvId, duration }),

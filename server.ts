@@ -24,6 +24,7 @@ app.prepare().then(() => {
   const server = createServer((req, res) => {
     try {
       const parsedUrl = parse(req.url!, true);
+      // Let Next.js handle all requests
       handle(req, res, parsedUrl);
     } catch (err) {
       console.error('Error handling request:', err);
