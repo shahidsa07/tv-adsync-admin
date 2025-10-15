@@ -4,8 +4,7 @@ import { parse } from 'url';
 import next from 'next';
 import { WebSocketServer } from 'ws';
 import { setTvOnlineStatus, getTvById, getTvsByGroupId } from './src/lib/data';
-import { getSubscriber } from './src/lib/redis';
-import type { Notification } from './src/lib/ws-notifications';
+import { setNotificationCallback, type Notification } from './src/lib/ws-notifications';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -19,7 +18,7 @@ const adminConnections = new Set<import('ws')>();
 const handleTvConnection = async (tvId: string, isConnecting: boolean, socketId: string | null) => {
   try {
     await setTvOnlineStatus(tvId, isConnecting, socketId);
-    // Admin notification is now handled via Redis Pub/Sub
+    sendToAllAdmins({ type: 'refresh-request' });
   } catch (error) {
     console.error(`Error updating TV status for ${tvId}:`, error);
   }
@@ -56,32 +55,25 @@ app.prepare().then(async () => {
 
   const wss = new WebSocketServer({ noServer: true });
 
-  // --- Redis Subscriber Logic ---
-  try {
-    const subscriber = await getSubscriber();
-    await subscriber.subscribe('ws-notifications', async (message) => {
-        console.log('Redis subscriber received message:', message);
+  // --- Notification Handler ---
+  // This connects the server actions to our WebSocket logic.
+  setNotificationCallback(async (notification: Notification) => {
+    console.log('Notification received in server:', notification);
+    if (notification.type === 'tv') {
+        sendToTv(notification.id, { type: 'REFRESH_STATE' });
+    } else if (notification.type === 'group') {
         try {
-            const notification = JSON.parse(message) as Notification;
-
-            if (notification.type === 'tv') {
-                sendToTv(notification.id, { type: 'REFRESH_STATE' });
-            } else if (notification.type === 'group') {
-                const tvs = await getTvsByGroupId(notification.id);
-                tvs.forEach(tv => {
-                    sendToTv(tv.tvId, { type: 'REFRESH_STATE' });
-                });
-            } else if (notification.type === 'all-admins') {
-                sendToAllAdmins({ type: 'refresh-request' });
-            }
+            const tvs = await getTvsByGroupId(notification.id);
+            tvs.forEach(tv => {
+                sendToTv(tv.tvId, { type: 'REFRESH_STATE' });
+            });
         } catch (e) {
-            console.error('Error processing Redis message:', e);
+             console.error('Error sending group notification:', e);
         }
-    });
-    console.log('Subscribed to Redis channel: ws-notifications');
-  } catch (error) {
-      console.error('Could not connect to Redis or subscribe. Real-time notifications will not work.', error);
-  }
+    } else if (notification.type === 'all-admins') {
+        sendToAllAdmins({ type: 'refresh-request' });
+    }
+  });
 
 
   server.on('upgrade', (request, socket, head) => {
@@ -98,10 +90,13 @@ app.prepare().then(async () => {
   wss.on('connection', (ws) => {
     let clientId: string | null = null;
     let clientType: 'tv' | 'admin' | null = null;
+
+    console.log('A client connected via WebSocket');
     
     ws.on('message', async (message) => {
          try {
             const data = JSON.parse(message.toString());
+            console.log('Received message:', data);
 
             if (data.type === 'register' && data.payload) {
                 const { tvId, clientType: type } = data.payload;
@@ -109,7 +104,7 @@ app.prepare().then(async () => {
                 if (type === 'admin') {
                     clientType = 'admin';
                     adminConnections.add(ws);
-                    console.log('Admin client connected');
+                    console.log('Admin client connected and registered');
                     ws.send(JSON.stringify({ type: 'registered', clientType: 'admin' }));
                     return;
                 }
@@ -124,7 +119,7 @@ app.prepare().then(async () => {
                     }
 
                     tvConnections.set(clientId, ws);
-                    console.log(`TV connection opened: ${clientId}`);
+                    console.log(`TV connection opened and registered: ${clientId}`);
                     
                     const tvDoc = await getTvById(clientId);
                     if (tvDoc) {
@@ -148,6 +143,8 @@ app.prepare().then(async () => {
                 tvConnections.delete(clientId);
                 await handleTvConnection(clientId, false, null);
             }
+        } else {
+             console.log('An un-registered client disconnected.');
         }
     });
 
@@ -162,5 +159,6 @@ app.prepare().then(async () => {
   server.listen(portToListen, hostToListen, (err?: Error) => {
     if (err) throw err;
     console.log(`> Ready on http://${hostname}:${portToListen}`);
+    console.log(`> WebSocket server listening on ws://${hostname}:${portToListen}/ws`);
   });
 });

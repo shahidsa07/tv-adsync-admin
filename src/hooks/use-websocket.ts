@@ -5,7 +5,6 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 let ws: WebSocket | null = null;
-const WEBSOCKET_PORT = 9003; 
 
 const connect = (router: any) => {
     // Check if running in a browser environment
@@ -20,8 +19,8 @@ const connect = (router: any) => {
     }
     
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Use the same hostname but the dedicated WebSocket port
-    const websocketUrl = `${protocol}//${window.location.hostname}:${WEBSOCKET_PORT}`;
+    // Connect to the /ws path on the same host and port as the web app
+    const websocketUrl = `${protocol}//${window.location.host}/ws`;
     
     console.log(`Attempting to connect to WebSocket at ${websocketUrl}`);
 
@@ -75,7 +74,8 @@ export function useWebSocket() {
     return () => {
         if (ws && ws.readyState === WebSocket.OPEN) {
             console.log('Closing admin WebSocket connection on component unmount.');
-            ws.close();
+            // Do not close the connection, as it might be shared across pages.
+            // Let the browser handle connection management.
         }
     }
   }, [router]); 

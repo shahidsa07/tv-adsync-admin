@@ -3,11 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:next": "next dev -p 9002 -H 0.0.0.0",
-    "dev:ws": "tsx watch src/websocket-server.ts",
-    "dev": "npx npm-run-all --parallel dev:next dev:ws",
+    "dev": "tsx watch server.ts",
     "build": "next build",
-    "start": "NODE_ENV=production node server.js",
+    "start": "NODE_ENV=production node dist/server.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },

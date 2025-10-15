@@ -36,13 +36,13 @@ The application needs Firebase credentials to connect to Firestore.
 
 ### 3. Run the Application
 
-This command will start both the Next.js application (on port 9002) and the WebSocket server (on port 9003) for you.
+This command will start the combined Next.js application and WebSocket server.
 
 ```bash
 npm run dev
 ```
 
 The application will be available at `http://localhost:9002`.
-The WebSocket server will be available at `ws://localhost:9003`.
+The WebSocket server will be available at `ws://localhost:9002/ws`.
 
 The initial data (TVs, groups, ads) will be seeded into your Firestore database the first time you visit one of the main pages.
