@@ -1,6 +1,13 @@
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
+# The command that builds your app
+build:
+  command: 'npm run build'
+# The command that starts your app
+start:
+  command: 'npm run start'
+
 runConfig:
   # The amount of CPU to reserve for each instance.
   # This can be a fractional value.
