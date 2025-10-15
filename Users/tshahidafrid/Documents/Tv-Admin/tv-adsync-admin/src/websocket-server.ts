@@ -175,7 +175,8 @@ wss.on('connection', (ws) => {
             console.log('Admin client disconnected');
         } else if (clientType === 'tv' && clientId) {
             console.log(`TV client disconnected: ${clientId}`);
-            if (tvConnections.get(clientId) === ws) {
+            // Ensure the client ID exists and this is the current connection before deleting
+            if (clientId && tvConnections.get(clientId) === ws) {
                 tvConnections.delete(clientId);
                 await handleTvConnection(clientId, false, ws);
             }
