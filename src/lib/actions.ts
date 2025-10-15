@@ -7,7 +7,33 @@ import { revalidatePath } from 'next/cache'
 import * as data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
 import type { Ad, Playlist, PriorityStream, TV } from './definitions'
-import { notifyTv, notifyGroup, notifyAdmins } from './ws-notifications';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
+// --- File-based Notification System ---
+const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
+
+async function sendNotification(notification: any) {
+  try {
+    await fs.mkdir(NOTIFICATION_DIR, { recursive: true });
+    const filePath = path.join(NOTIFICATION_DIR, `notif-${Date.now()}-${Math.random()}`);
+    await fs.writeFile(filePath, JSON.stringify(notification));
+  } catch (error) {
+    console.error('Failed to write notification file:', error);
+  }
+}
+
+export const notifyTv = async (tvId: string) => {
+    await sendNotification({ type: 'tv', id: tvId });
+}
+
+export const notifyGroup = async (groupId: string) => {
+    await sendNotification({ type: 'group', id: groupId });
+}
+
+export const notifyAdmins = async () => {
+    await sendNotification({ type: 'all-admins' });
+}
 
 
 // --- Group Actions ---

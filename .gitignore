@@ -14,6 +14,7 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
@@ -25,7 +26,6 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env
 .env*.local
 
 # vercel
@@ -35,5 +35,5 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# temp notification files
-.notifications
+# temp notification queue
+/.notifications

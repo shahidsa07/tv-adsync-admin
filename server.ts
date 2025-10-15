@@ -7,7 +7,8 @@ import { parse } from 'url';
 import next from 'next';
 import { WebSocketServer } from 'ws';
 import { setTvOnlineStatus, getTvById, getTvsByGroupId } from './src/lib/data';
-import { setNotificationCallback, type Notification } from './src/lib/ws-notifications';
+import * as fs from 'fs';
+import * as path from 'path';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
@@ -17,6 +18,8 @@ const handle = app.getRequestHandler();
 
 const tvConnections = new Map<string, import('ws')>();
 const adminConnections = new Set<import('ws')>();
+
+const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
 const handleTvConnection = async (tvId: string, isConnecting: boolean, socketId: string | null) => {
   try {
@@ -44,6 +47,59 @@ const sendToAllAdmins = (message: any) => {
     });
 }
 
+// --- File-based Notification Handler ---
+async function setupNotificationWatcher() {
+    console.log(`Watching for notifications in: ${NOTIFICATION_DIR}`);
+    // Ensure the notification directory exists
+    try {
+        await fs.promises.mkdir(NOTIFICATION_DIR, { recursive: true });
+    } catch (e) {
+        console.error("Could not create notification directory", e);
+    }
+    
+    // Process any existing files
+    const existingFiles = await fs.promises.readdir(NOTIFICATION_DIR);
+    for (const file of existingFiles) {
+        processNotificationFile(path.join(NOTIFICATION_DIR, file));
+    }
+
+    // Watch for new files
+    fs.watch(NOTIFICATION_DIR, async (eventType, filename) => {
+        if (eventType === 'rename' && filename) { // 'rename' is often used for new files
+             processNotificationFile(path.join(NOTIFICATION_DIR, filename));
+        }
+    });
+}
+
+async function processNotificationFile(filePath: string) {
+    try {
+        const content = await fs.promises.readFile(filePath, 'utf8');
+        const notification = JSON.parse(content);
+        console.log('Notification received via file:', notification);
+
+        if (notification.type === 'tv') {
+            sendToTv(notification.id, { type: 'REFRESH_STATE' });
+        } else if (notification.type === 'group') {
+            try {
+                const tvs = await getTvsByGroupId(notification.id);
+                tvs.forEach(tv => {
+                    sendToTv(tv.tvId, { type: 'REFRESH_STATE' });
+                });
+            } catch (e) {
+                 console.error('Error sending group notification:', e);
+            }
+        } else if (notification.type === 'all-admins') {
+            sendToAllAdmins({ type: 'refresh-request' });
+        }
+
+        // Clean up the file
+        await fs.promises.unlink(filePath);
+    } catch (error) {
+        // It's possible to get errors if the file is deleted before we read it, which is fine.
+        // console.error(`Error processing notification file ${filePath}:`, error);
+    }
+}
+
 app.prepare().then(async () => {
   const server = createServer(async (req, res) => {
     try {
@@ -58,25 +114,7 @@ app.prepare().then(async () => {
 
   const wss = new WebSocketServer({ noServer: true });
 
-  // --- Notification Handler ---
-  // This connects the server actions to our WebSocket logic.
-  setNotificationCallback(async (notification: Notification) => {
-    console.log('Notification received in server:', notification);
-    if (notification.type === 'tv') {
-        sendToTv(notification.id, { type: 'REFRESH_STATE' });
-    } else if (notification.type === 'group') {
-        try {
-            const tvs = await getTvsByGroupId(notification.id);
-            tvs.forEach(tv => {
-                sendToTv(tv.tvId, { type: 'REFRESH_STATE' });
-            });
-        } catch (e) {
-             console.error('Error sending group notification:', e);
-        }
-    } else if (notification.type === 'all-admins') {
-        sendToAllAdmins({ type: 'refresh-request' });
-    }
-  });
+  await setupNotificationWatcher();
 
 
   server.on('upgrade', (request, socket, head) => {
