@@ -5,12 +5,10 @@
   "scripts": {
     "dev": "next dev -p 9002",
     "ws:dev": "tsx src/websocket-server.ts",
-    "ws:start": "node dist/websocket-server.js",
     "genkit:start": "genkit start -- tsx src/ai/dev.ts",
     "genkit:dev": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build:server": "tsc --project tsconfig-server.json",
-    "build": "npm run build:server && next build",
-    "start": "npm run ws:start & next start",
+    "build": "tsc --project tsconfig-server.json && next build",
+    "start": "node dist/websocket-server.js & next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
