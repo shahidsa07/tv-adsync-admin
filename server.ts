@@ -88,7 +88,7 @@ app.prepare().then(() => {
       if (tvDoc) {
         if (tvDoc.socketId === null) {
           console.log(`TV ${tvId} is now registered and connected, marking as online.`);
-          await handleTvConnection(tvId, true, ws);
+          await handleTvConnection(tvId, true);
         }
         console.log(`Sending REFRESH_STATE to ${tvId}`);
         ws.send(JSON.stringify({ type: 'REFRESH_STATE' }));
@@ -100,7 +100,7 @@ app.prepare().then(() => {
     }
   };
 
-  const handleTvConnection = async (tvId: string, isConnecting: boolean, ws: import('ws')) => {
+  const handleTvConnection = async (tvId: string, isConnecting: boolean) => {
     const socketId = isConnecting ? `ws-${Date.now()}` : null;
     try {
       await setTvOnlineStatus(tvId, isConnecting, socketId);
@@ -150,7 +150,7 @@ app.prepare().then(() => {
               console.log(`TV connection opened: ${clientId}`);
               const tvDoc = await getTvById(clientId);
               if (tvDoc) {
-                await handleTvConnection(clientId, true, ws);
+                await handleTvConnection(clientId, true);
               } else {
                 console.log(`TV is not registered yet. Connection is pending registration for: ${clientId}`);
               }
@@ -174,7 +174,7 @@ app.prepare().then(() => {
         console.log(`TV client disconnected: ${currentClientId}`);
         if (tvConnections.get(currentClientId) === ws) {
           tvConnections.delete(currentClientId);
-          await handleTvConnection(currentClientId, false, ws);
+          await handleTvConnection(currentClientId, false);
         }
       } else {
         console.log('An unidentified client disconnected');

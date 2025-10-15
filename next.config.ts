@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -31,10 +32,17 @@ const nextConfig: NextConfig = {
     ],
   },
   async rewrites() {
+    // In production, the WebSocket server is on the same host.
+    // In development, it's on localhost:9002.
+    const websocketDestination =
+      process.env.NODE_ENV === 'production'
+        ? '/ws'
+        : 'http://localhost:9002/ws';
+
     return [
       {
         source: '/ws',
-        destination: 'http://localhost:9002/ws',
+        destination: websocketDestination,
       },
     ];
   },
