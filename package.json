@@ -5,7 +5,7 @@
   "scripts": {
     "dev:next": "next dev -p 9002 -H 0.0.0.0",
     "dev:ws": "tsx watch src/server.ts",
-    "dev": "npm-run-all --parallel dev:next dev:ws",
+    "dev": "npx npm-run-all --parallel dev:next dev:ws",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
