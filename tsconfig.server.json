@@ -6,5 +6,5 @@
     "outDir": "dist",
     "noEmit": false
   },
-  "include": ["socket-server.ts"]
+  "include": ["server.ts"]
 }
