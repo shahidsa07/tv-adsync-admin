@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 let ws: WebSocket | null = null;
-const WEBSOCKET_PATH = '/ws'; 
+const WEBSOCKET_PORT = 9003; 
 
 const connect = (router: any) => {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -16,8 +16,7 @@ const connect = (router: any) => {
     if (typeof window === 'undefined') return;
 
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // The WebSocket now connects to the same host and port as the main application, but on the /ws path.
-    const websocketUrl = `${protocol}//${window.location.host}${WEBSOCKET_PATH}`;
+    const websocketUrl = `${protocol}//${window.location.hostname}:${WEBSOCKET_PORT}`;
     
     console.log(`Attempting to connect to WebSocket at ${websocketUrl}`);
 

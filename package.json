@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch server.ts",
+    "dev:next": "next dev -p 9002 -H 0.0.0.0",
+    "dev:ws": "tsx watch src/websocket-server.ts",
+    "dev": "npx npm-run-all --parallel dev:next dev:ws",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
@@ -49,7 +51,6 @@
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.15.1",
-    "redis": "^4.6.15",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
     "ws": "^8.18.0",
