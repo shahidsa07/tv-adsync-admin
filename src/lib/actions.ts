@@ -1,7 +1,8 @@
+
 'use server';
 
 import { config } from 'dotenv';
-config(); // Load environment variables from .env file FIRST.
+config();
 
 import { revalidatePath } from 'next/cache'
 import * as data from './data'
@@ -15,9 +16,11 @@ const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
 async function sendNotification(notification: any) {
   try {
+    // Ensure the notification directory exists
     await fs.mkdir(NOTIFICATION_DIR, { recursive: true });
-    const filePath = path.join(NOTIFICATION_DIR, `notif-${Date.now()}-${Math.random()}`);
+    const filePath = path.join(NOTIFICATION_DIR, `notif-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`);
     await fs.writeFile(filePath, JSON.stringify(notification));
+    console.log(`Notification sent via file: ${filePath}`);
   } catch (error) {
     console.error('Failed to write notification file:', error);
   }

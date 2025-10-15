@@ -58,22 +58,31 @@ async function setupNotificationWatcher() {
     }
     
     // Process any existing files
-    const existingFiles = await fs.promises.readdir(NOTIFICATION_DIR);
-    for (const file of existingFiles) {
-        processNotificationFile(path.join(NOTIFICATION_DIR, file));
+    try {
+        const existingFiles = await fs.promises.readdir(NOTIFICATION_DIR);
+        for (const file of existingFiles) {
+            await processNotificationFile(path.join(NOTIFICATION_DIR, file));
+        }
+    } catch (error) {
+        console.error("Error processing existing notification files:", error);
     }
+
 
     // Watch for new files
     fs.watch(NOTIFICATION_DIR, async (eventType, filename) => {
-        if (eventType === 'rename' && filename) { // 'rename' is often used for new files
-             processNotificationFile(path.join(NOTIFICATION_DIR, filename));
+        if ((eventType === 'rename' || eventType === 'change') && filename) { // 'rename' is often used for new files
+             await processNotificationFile(path.join(NOTIFICATION_DIR, filename));
         }
     });
 }
 
 async function processNotificationFile(filePath: string) {
+    // Add a small delay and check for existence to handle file system race conditions
+    await new Promise(resolve => setTimeout(resolve, 50)); 
     try {
         const content = await fs.promises.readFile(filePath, 'utf8');
+        await fs.promises.unlink(filePath); // Delete immediately after reading
+        
         const notification = JSON.parse(content);
         console.log('Notification received via file:', notification);
 
@@ -92,11 +101,10 @@ async function processNotificationFile(filePath: string) {
             sendToAllAdmins({ type: 'refresh-request' });
         }
 
-        // Clean up the file
-        await fs.promises.unlink(filePath);
-    } catch (error) {
-        // It's possible to get errors if the file is deleted before we read it, which is fine.
-        // console.error(`Error processing notification file ${filePath}:`, error);
+    } catch (error: any) {
+        if (error.code !== 'ENOENT') { // ENOENT means file not found, which is okay if it was processed and deleted quickly
+            console.error(`Error processing notification file ${filePath}:`, error);
+        }
     }
 }
 

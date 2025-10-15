@@ -24,16 +24,15 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.idea
+.vscode
 
 # local env files
-.env*.local
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# temp notification queue
-/.notifications
+# temporary notification files
+.notifications/
