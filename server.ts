@@ -23,6 +23,8 @@ const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 app.prepare().then(() => {
   const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     try {
+      // Be sure to pass `true` as the second argument to `url.parse`.
+      // This tells it to parse the query portion of the URL.
       const parsedUrl = parse(req.url!, true);
       handle(req, res, parsedUrl);
     } catch (err) {
