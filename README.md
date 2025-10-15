@@ -23,15 +23,20 @@ npm install
 
 The application needs Firebase credentials to connect to Firestore.
 
-- **Copy the example file**: Create a `.env` file by copying the example template.
+- **Create a `.env` file**: You can copy the structure from the `.env.example` file if one exists, or create it from scratch.
   ```bash
-  cp .env.example .env
+  touch .env
   ```
 - **Open `.env`** in your code editor.
 - **Add Firebase Credentials**:
     1. Go to your Firebase project settings and click on the "Service accounts" tab.
     2. Click "Generate new private key" to download a JSON file with your credentials.
-    3. Open the downloaded JSON file and copy the `project_id`, `client_email`, and `private_key` values into your `.env` file.
+    3. Open the downloaded JSON file and copy the `project_id`, `client_email`, and `private_key` values into your `.env` file like so:
+    ```
+    FIREBASE_PROJECT_ID="<your_project_id>"
+    FIREBASE_CLIENT_EMAIL="<your_client_email>"
+    FIREBASE_PRIVATE_KEY="<your_private_key>"
+    ```
     4. **Important**: The `private_key` must be enclosed in double quotes (`"`) and all newline characters (`\n`) must be preserved exactly as they are in the JSON file.
 
 ### 3. Run the Application
