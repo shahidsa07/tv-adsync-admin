@@ -174,11 +174,11 @@ wss.on('connection', (ws) => {
             console.log('Admin client disconnected');
         } else if (clientType === 'tv' && clientId) {
             console.log(`TV client disconnected: ${clientId}`);
+            const currentClientId = clientId; // Create a non-null copy
             // Check if this specific websocket instance is the one we have stored for the client
-            if (tvConnections.get(clientId) === ws) {
-                tvConnections.delete(clientId);
-                // Now clientId is guaranteed to be a string
-                await handleTvConnection(clientId, false, ws);
+            if (tvConnections.get(currentClientId) === ws) {
+                tvConnections.delete(currentClientId);
+                await handleTvConnection(currentClientId, false, ws);
             }
         } else {
             console.log('An unidentified client disconnected');
