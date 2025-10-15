@@ -1,9 +1,12 @@
 import { WebSocketServer } from 'ws';
 import { setTvOnlineStatus, getTvById, getTvsByGroupId } from './lib/data';
-import { setNotificationCallback } from './lib/ws-notifications';
 import 'dotenv/config';
+import fs from 'fs';
+import path from 'path';
+import type { Notification } from './lib/ws-notifications';
 
 const wss = new WebSocketServer({ port: 9003 });
+const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
 console.log("WebSocket server starting on port 9003...");
 
@@ -27,25 +30,47 @@ const sendToAllAdmins = (message: any) => {
     });
 }
 
-// This is the key part: the WebSocket server sets the callback function
-// that server actions will use to send notifications.
-setNotificationCallback(async (notification) => {
-  console.log('Notification received in WebSocket server:', notification);
-  if (notification.type === 'tv') {
-    sendToTv(notification.id, { type: 'REFRESH_STATE' });
-  } else if (notification.type === 'group') {
+// --- File-based notification watching ---
+const processNotificationFile = async (filePath: string) => {
     try {
-      const tvs = await getTvsByGroupId(notification.id);
-      tvs.forEach(tv => {
-        sendToTv(tv.tvId, { type: 'REFRESH_STATE' });
-      });
-    } catch (e) {
-      console.error(`Error getting TVs for group ${notification.id}`, e);
+        const content = await fs.promises.readFile(filePath, 'utf-8');
+        const notification = JSON.parse(content) as Notification;
+        console.log('Processing notification:', notification);
+
+        if (notification.type === 'tv') {
+            sendToTv(notification.id, { type: 'REFRESH_STATE' });
+        } else if (notification.type === 'group') {
+            const tvs = await getTvsByGroupId(notification.id);
+            tvs.forEach(tv => sendToTv(tv.tvId, { type: 'REFRESH_STATE' }));
+        } else if (notification.type === 'all-admins') {
+            sendToAllAdmins({ type: 'refresh-request' });
+        }
+        
+        await fs.promises.unlink(filePath); // Clean up the file
+    } catch (error) {
+        console.error(`Error processing notification file ${filePath}:`, error);
     }
-  } else if (notification.type === 'all-admins') {
-    sendToAllAdmins({ type: 'refresh-request' });
-  }
-});
+}
+
+const watchNotifications = () => {
+    console.log(`Watching for notifications in: ${NOTIFICATION_DIR}`);
+    if (!fs.existsSync(NOTIFICATION_DIR)) {
+        fs.mkdirSync(NOTIFICATION_DIR, { recursive: true });
+    }
+
+    fs.watch(NOTIFICATION_DIR, (eventType, filename) => {
+        if (eventType === 'rename' && filename) { // 'rename' is often triggered for new files
+            const filePath = path.join(NOTIFICATION_DIR, filename);
+            if (fs.existsSync(filePath)) {
+                 // Adding a small delay to ensure file is fully written
+                setTimeout(() => processNotificationFile(filePath), 100);
+            }
+        }
+    });
+};
+
+watchNotifications();
+// --- End of file-based notification watching ---
 
 
 const handleTvConnection = async (tvId: string, isConnecting: boolean, socketId: string | null) => {

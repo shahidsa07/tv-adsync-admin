@@ -2,65 +2,38 @@
 import fs from 'fs/promises';
 import path from 'path';
 
-// This is a placeholder for the actual callback function that will send the message
-// over a WebSocket connection.
-let notificationCallback: ((message: any) => void) | null = null;
-
-// This function is called by the WebSocket server to set the callback.
-export const setNotificationCallback = (callback: (message: any) => void) => {
-    console.log("WebSocket notification callback has been set.");
-    notificationCallback = callback;
-};
-
-export const getNotificationCallback = () => {
-    return notificationCallback;
-}
+// Note: This implementation uses the local filesystem as a simple message queue.
+// In a scaled-out or serverless environment, a more robust solution like Redis Pub/Sub would be required.
 
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
 // This function is called from server actions.
-// It queues a notification by writing a file.
-const queueNotification = async (message: any) => {
+// It "queues" a notification by writing a small file to a directory that the WebSocket server watches.
+const queueNotification = async (message: Notification) => {
     try {
         await fs.mkdir(NOTIFICATION_DIR, { recursive: true });
-        const fileName = `${message.type}-${message.id}-${Date.now()}.json`;
+        const fileName = `${message.type}_${'id' in message ? message.id : 'all'}_${Date.now()}.json`;
         const filePath = path.join(NOTIFICATION_DIR, fileName);
         await fs.writeFile(filePath, JSON.stringify(message));
-        console.log(`Queued notification: ${fileName}`);
+        console.log(`Queued file notification: ${fileName}`);
     } catch (error) {
-        console.error('Error queueing notification:', error);
+        console.error('Error queueing file notification:', error);
     }
 };
 
 export type Notification = { type: 'tv', id: string } | { type: 'group', id: string } | { type: 'all-admins' };
 
-
 export const notifyTv = async (tvId: string) => {
     const message: Notification = { type: 'tv', id: tvId };
-    console.log(`Queueing notification for TV: ${tvId}`);
-    if (notificationCallback) {
-        notificationCallback(message);
-    } else {
-        console.log("WebSocket notification callback not set. Notification queueing is disabled.");
-    }
+    await queueNotification(message);
 }
 
 export const notifyGroup = async (groupId: string) => {
     const message: Notification = { type: 'group', id: groupId };
-    console.log(`Queueing notification for Group: ${groupId}`);
-    if (notificationCallback) {
-        notificationCallback(message);
-    } else {
-         console.log("WebSocket notification callback not set. Notification queueing is disabled.");
-    }
+    await queueNotification(message);
 }
 
 export const notifyAdmins = async () => {
     const message: Notification = { type: 'all-admins' };
-    console.log('Queueing notification for all admins');
-     if (notificationCallback) {
-        notificationCallback(message);
-    } else {
-         console.log("WebSocket notification callback not set. Notification queueing is disabled.");
-    }
+    await queueNotification(message);
 }

@@ -8,14 +8,19 @@ let ws: WebSocket | null = null;
 const WEBSOCKET_PORT = 9003; 
 
 const connect = (router: any) => {
+    // Check if running in a browser environment
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
+    // Prevent multiple connections
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
         console.log('Admin WebSocket connection already established or connecting.');
         return;
     }
     
-    if (typeof window === 'undefined') return;
-
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // Use the same hostname but the dedicated WebSocket port
     const websocketUrl = `${protocol}//${window.location.hostname}:${WEBSOCKET_PORT}`;
     
     console.log(`Attempting to connect to WebSocket at ${websocketUrl}`);
@@ -37,8 +42,9 @@ const connect = (router: any) => {
         const message = JSON.parse(event.data);
         console.log('Admin received message:', message);
         
-        if (message.type === 'status-changed' || message.type === 'refresh-request') {
-          console.log('State changed on server, refreshing router...');
+        // This message is sent from the server to request a data refresh
+        if (message.type === 'refresh-request') {
+          console.log('Refresh request received from server, refreshing router...');
           router.refresh();
         }
       } catch (error) {
@@ -55,7 +61,7 @@ const connect = (router: any) => {
 
     ws.onerror = (error) => {
       console.error('Admin WebSocket error:', error);
-      ws?.close();
+      // ws.close() will be called automatically by the browser on error
     };
 }
 
@@ -63,8 +69,14 @@ export function useWebSocket() {
   const router = useRouter();
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      connect(router);
+    connect(router);
+    
+    // Clean up on component unmount
+    return () => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+            console.log('Closing admin WebSocket connection on component unmount.');
+            ws.close();
+        }
     }
   }, [router]); 
 }
