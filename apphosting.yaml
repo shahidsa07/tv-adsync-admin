@@ -3,5 +3,3 @@
 runConfig:
   cpu: 1
   maxInstances: 1
-# This is no longer needed with the new architecture, but leaving it doesn't hurt.
-sessionAffinity: true
