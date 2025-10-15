@@ -1,4 +1,4 @@
-'use server';
+
 
 // This implementation uses a simple in-memory callback.
 // It works because the Next.js app and the WebSocket server now run in the same process.
