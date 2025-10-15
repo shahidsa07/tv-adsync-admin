@@ -31,6 +31,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/ws',
+        destination: 'http://localhost:9003', // Proxy to the standalone WebSocket server
+      },
+    ]
+  },
 };
 
 export default nextConfig;

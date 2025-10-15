@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch server.ts",
+    "dev": "concurrently \"next dev -p 9002\" \"tsx watch socket-server.ts\"",
     "genkit:start": "genkit start -- tsx src/ai/dev.ts",
     "genkit:dev": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "NODE_ENV=production next build && tsc --project tsconfig.server.json",
-    "start": "NODE_ENV=production node dist/server.js",
+    "start": "concurrently \"next start -p 9002\" \"node dist/socket-server.js\"",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
@@ -38,6 +38,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "concurrently": "^8.2.2",
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
