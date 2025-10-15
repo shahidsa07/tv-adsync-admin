@@ -10,25 +10,20 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Determine the WebSocket protocol based on the window's protocol
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    
-    // Use the same hostname as the current window, but with port 8080
-    const wsHost = `${wsProtocol}//${window.location.hostname}:8080`;
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
     
     let ws: WebSocket;
 
     try {
-        ws = new WebSocket(wsHost);
+        ws = new WebSocket(wsUrl);
     } catch(e) {
         console.error("Could not create WebSocket connection to server", e);
         return;
     }
 
-
     ws.onopen = () => {
       console.log('Admin WebSocket connection established');
-      // Register this client as an "admin" type
       ws.send(JSON.stringify({ type: 'register', payload: { clientType: 'admin' } }));
     };
 
@@ -37,7 +32,6 @@ export function useWebSocket() {
         const message = JSON.parse(event.data);
         console.log('Admin received message:', message);
         
-        // If the server tells us the status of a TV changed, refresh the page data
         if (message.type === 'status-changed') {
           console.log('TV status changed, refreshing router...');
           router.refresh();
@@ -55,11 +49,10 @@ export function useWebSocket() {
       console.error('Admin WebSocket error:', error);
     };
 
-    // Cleanup the connection when the component unmounts
     return () => {
       if (ws) {
         ws.close();
       }
     };
-  }, [router]); // router is a stable dependency
+  }, [router]);
 }

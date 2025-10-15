@@ -167,7 +167,7 @@ app.prepare().then(() => {
         adminConnections.delete(ws);
         console.log('Admin client disconnected');
       } else if (clientType === 'tv' && clientId) {
-        const currentClientId = clientId;
+        const currentClientId = clientId; // Use a local copy
         console.log(`TV client disconnected: ${currentClientId}`);
         if (tvConnections.get(currentClientId) === ws) {
           tvConnections.delete(currentClientId);
