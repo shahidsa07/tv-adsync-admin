@@ -173,10 +173,11 @@ wss.on('connection', (ws) => {
             adminConnections.delete(ws);
             console.log('Admin client disconnected');
         } else if (clientType === 'tv' && clientId) {
-            console.log(`TV client disconnected: ${clientId}`);
-            if (clientId && tvConnections.get(clientId) === ws) {
-                tvConnections.delete(clientId);
-                await handleTvConnection(clientId, false, ws);
+            const currentClientId = clientId;
+            console.log(`TV client disconnected: ${currentClientId}`);
+            if (currentClientId && tvConnections.get(currentClientId) === ws) {
+                tvConnections.delete(currentClientId);
+                await handleTvConnection(currentClientId, false, ws);
             }
         } else {
             console.log('An unidentified client disconnected');
