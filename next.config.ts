@@ -30,6 +30,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/ws',
+        destination: 'http://localhost:9002/ws',
+      },
+    ];
+  },
 };
 
 export default nextConfig;
