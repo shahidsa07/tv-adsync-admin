@@ -171,12 +171,13 @@ app.prepare().then(() => {
         console.log('Admin client disconnected');
       } else if (clientType === 'tv' && clientId) {
         const currentClientId = clientId;
-        if (currentClientId) {
+        // Check if the connection being closed is the current one for this ID
+        if (tvConnections.get(currentClientId) === ws) {
+            tvConnections.delete(currentClientId);
             console.log(`TV client disconnected: ${currentClientId}`);
-            if (tvConnections.get(currentClientId) === ws) {
-                tvConnections.delete(currentClientId);
-                await handleTvConnection(currentClientId, false);
-            }
+            await handleTvConnection(currentClientId, false);
+        } else {
+            console.log(`An old connection for ${currentClientId} closed.`);
         }
       } else {
         console.log('An unidentified client disconnected');
