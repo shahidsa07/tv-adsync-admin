@@ -9,7 +9,7 @@ import * as path from 'path';
 import chokidar from 'chokidar';
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = 'localhost';
+const hostname = '0.0.0.0'; // Listen on all network interfaces
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 const app = next({ dev });
@@ -23,8 +23,8 @@ app.prepare().then(() => {
       const parsedUrl = parse(req.url!, true);
       const { pathname } = parsedUrl;
       
+      // Explicitly prevent Next.js from handling the WebSocket path
       if (pathname === '/ws') {
-        // This path is exclusively for WebSockets, do not let Next.js handle it.
         res.writeHead(426, { 'Upgrade': 'websocket' });
         res.end();
         return;
@@ -192,8 +192,7 @@ app.prepare().then(() => {
 
   setupNotificationWatcher();
 
-  const effectivePort = process.env.PORT || port;
-  server.listen(effectivePort, () => {
-    console.log(`> Ready on http://${hostname}:${effectivePort}`);
+  server.listen(port, hostname, () => {
+    console.log(`> Server listening at http://${hostname}:${port}`);
   });
 });
