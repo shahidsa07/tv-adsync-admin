@@ -11,9 +11,9 @@ export function useWebSocket() {
     if (typeof window === 'undefined') return;
 
     const isProduction = process.env.NODE_ENV === 'production';
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsProtocol = isProduction ? 'wss:' : 'ws:';
     
-    // In production, connect to the same host. In dev, connect to the dedicated socket server port.
+    // In production, connect to the same host on the standard port. In dev, connect to the dedicated socket server port.
     const wsHost = isProduction ? window.location.host : 'localhost:9001';
     const wsUrl = `${wsProtocol}//${wsHost}`;
     
