@@ -1,9 +1,5 @@
 import {getApps, initializeApp, cert, App} from 'firebase-admin/app';
 import {getFirestore, Firestore} from 'firebase-admin/firestore';
-import { config } from 'dotenv';
-
-// Load environment variables from .env file
-config();
 
 // This is the recommended pattern for initializing firebase-admin in a serverless environment.
 // It ensures that we don't try to initialize the app more than once.
