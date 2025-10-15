@@ -2,7 +2,7 @@
 import { config } from 'dotenv';
 config(); // Load environment variables from .env file FIRST.
 
-import { createServer } from 'http';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { parse } from 'url';
 import next from 'next';
 import { WebSocketServer } from 'ws';
@@ -21,7 +21,7 @@ const handle = app.getRequestHandler();
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
 app.prepare().then(() => {
-  const server = createServer((req, res) => {
+  const server = createServer((req: IncomingMessage, res: ServerResponse) => {
     try {
       const parsedUrl = parse(req.url!, true);
       handle(req, res, parsedUrl);
