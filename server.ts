@@ -10,7 +10,7 @@ import chokidar from 'chokidar';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = 'localhost';
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 9002;
+const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 
 const app = next({ dev });
 const handle = app.getRequestHandler();
@@ -23,11 +23,9 @@ app.prepare().then(() => {
       const parsedUrl = parse(req.url!, true);
       const { pathname } = parsedUrl;
       
-      // Crucially, we do not let Next.js handle the WebSocket path.
       if (pathname === '/ws') {
-        // This will be handled by the 'upgrade' event listener.
-        // We can end the response here for any non-upgrade requests to /ws.
-        res.writeHead(404);
+        // This path is exclusively for WebSockets, do not let Next.js handle it.
+        res.writeHead(426, { 'Upgrade': 'websocket' });
         res.end();
         return;
       }
@@ -105,7 +103,6 @@ app.prepare().then(() => {
   };
 
   const handleTvConnection = async (tvId: string, isConnecting: boolean, ws: import('ws')) => {
-    // Pass the actual ws connection object to get a unique identifier
     const socketId = isConnecting ? `ws-${Date.now()}` : null;
     try {
       await setTvOnlineStatus(tvId, isConnecting, socketId);
@@ -122,7 +119,6 @@ app.prepare().then(() => {
         wss.emit('connection', ws, request);
       });
     } else {
-      // This is important: If the upgrade is not for our websocket, we must destroy the socket.
       socket.destroy();
     }
   });
@@ -196,7 +192,8 @@ app.prepare().then(() => {
 
   setupNotificationWatcher();
 
-  server.listen(port, () => {
-    console.log(`> Ready on http://${hostname}:${port}`);
+  const effectivePort = process.env.PORT || port;
+  server.listen(effectivePort, () => {
+    console.log(`> Ready on http://${hostname}:${effectivePort}`);
   });
 });
