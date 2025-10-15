@@ -3,6 +3,9 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import getConfig from 'next/config';
+
+const { publicRuntimeConfig } = getConfig();
 
 export function useWebSocket() {
   const router = useRouter();
@@ -10,8 +13,9 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+    const siteUrl = new URL(publicRuntimeConfig.siteUrl);
+    const wsProtocol = siteUrl.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${siteUrl.host}/ws`;
     
     let ws: WebSocket;
 

@@ -31,6 +31,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  publicRuntimeConfig: {
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || `http://localhost:${process.env.PORT || 9002}`,
+  }
 };
 
 export default nextConfig;
