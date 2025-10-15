@@ -38,7 +38,6 @@ export async function deleteGroupAction(groupId: string) {
 
 export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
     try {
-        // Find which TVs were removed to notify them
         const originalTvs = await data.getTvsByGroupId(groupId);
         const originalTvIds = originalTvs.map(tv => tv.tvId);
         
@@ -83,7 +82,6 @@ export async function forceRefreshGroupAction(groupId: string) {
 
 export async function registerTvAction(tvId: string, name: string, shopLocation?: string) {
     try {
-        // Sanitize the TV ID to make it Firestore-safe
         const sanitizedTvId = tvId.trim().replace(/\//g, '_');
         
         if (!sanitizedTvId) {
@@ -97,7 +95,6 @@ export async function registerTvAction(tvId: string, name: string, shopLocation?
 
         await data.createTv(sanitizedTvId, name, shopLocation);
         
-        // Notify the websocket server to update the status if the TV is already connected
         notifyTv(sanitizedTvId);
 
         revalidatePath('/', 'layout');
@@ -127,17 +124,14 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
     const oldGroupId = oldTvData?.groupId;
 
     await data.updateTv(tvId, { groupId });
-    notifyTv(tvId); // Notify the TV that was moved
+    notifyTv(tvId); 
 
-    // Also notify the group it was removed from, if any
     if(oldGroupId) {
         notifyGroup(oldGroupId);
     }
-     // Also notify the group it was added to
     if (groupId) {
         notifyGroup(groupId);
     }
-
 
     revalidatePath('/', 'layout');
 
@@ -163,29 +157,9 @@ export async function removeFromGroupAction(tvId: string) {
     }
 }
 
-
-export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean, socketId: string | null) {
-    try {
-        await data.setTvOnlineStatus(tvId, isOnline, socketId);
-        
-        // This revalidation seems to not be enough to trigger a client-side update
-        // for a page that is already being viewed.
-        revalidatePath(`/dashboard`);
-        revalidatePath(`/tvs`);
-        revalidatePath(`/groups`);
-
-        return { success: true, message: `TV status updated.` };
-    } catch (error) {
-        const message = error instanceof Error ? error.message : 'Failed to update TV status.'
-        return { success: false, message };
-    }
-}
-
 export async function deleteTvAction(tvId: string) {
     try {
         const tv = await data.getTvById(tvId);
-        // We notify the TV before deleting it from the database.
-        // The client should handle this gracefully (e.g. show registration screen).
         if (tv) {
             notifyTv(tv.tvId);
         }
@@ -232,7 +206,7 @@ export async function createAdAction(name: string, type: 'image' | 'video', url:
     try {
         await data.createAd(name, type, url, duration, tags);
         revalidatePath('/ads');
-        revalidatePath('/playlists', 'layout'); // Revalidate all playlist pages
+        revalidatePath('/playlists', 'layout'); 
         return { success: true, message: 'Ad created successfully.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to create ad.'
@@ -270,7 +244,6 @@ export async function deleteAdAction(adId: string) {
         if (playlists) {
             for (const playlist of playlists) {
                 if (playlist.adIds.includes(adId)) {
-                    // This playlist is affected. Find groups using it.
                     const groups = await data.getGroupsByPlaylistId(playlist.id);
                     groups.forEach(group => affectedGroups.add(group.id));
                 }

@@ -4,11 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 9002",
-    "ws:dev": "tsx src/websocket-server.ts",
     "genkit:start": "genkit start -- tsx src/ai/dev.ts",
     "genkit:dev": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "tsc --project tsconfig-server.json && next build",
-    "start": "node dist/websocket-server.js & next start",
+    "build": "next build",
+    "start": "next start",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },

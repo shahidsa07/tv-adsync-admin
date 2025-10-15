@@ -4,19 +4,20 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-export function useWebSocket() {
-  const router = useRouter();
+let ws: WebSocket | null = null;
 
-  useEffect(() => {
+const connect = (router: any) => {
+    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
+        console.log('Admin WebSocket connection already established or connecting.');
+        return;
+    }
+    
     if (typeof window === 'undefined') return;
 
-    // Determine the WebSocket protocol based on the window's protocol
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsHost = `${wsProtocol}//${window.location.host}/api/ws`;
     
-    // Use the same hostname as the current window, but with port 8080
-    const wsHost = `${wsProtocol}//${window.location.hostname}:8080`;
-    
-    let ws: WebSocket;
+    console.log(`Attempting to connect to WebSocket at ${wsHost}`);
 
     try {
         ws = new WebSocket(wsHost);
@@ -25,11 +26,9 @@ export function useWebSocket() {
         return;
     }
 
-
     ws.onopen = () => {
       console.log('Admin WebSocket connection established');
-      // Register this client as an "admin" type
-      ws.send(JSON.stringify({ type: 'register', payload: { clientType: 'admin' } }));
+      ws?.send(JSON.stringify({ type: 'register', payload: { clientType: 'admin' } }));
     };
 
     ws.onmessage = (event) => {
@@ -37,9 +36,8 @@ export function useWebSocket() {
         const message = JSON.parse(event.data);
         console.log('Admin received message:', message);
         
-        // If the server tells us the status of a TV changed, refresh the page data
-        if (message.type === 'status-changed') {
-          console.log('TV status changed, refreshing router...');
+        if (message.type === 'status-changed' || message.type === 'refresh-request') {
+          console.log('State changed on server, refreshing router...');
           router.refresh();
         }
       } catch (error) {
@@ -47,19 +45,25 @@ export function useWebSocket() {
       }
     };
 
-    ws.onclose = () => {
-      console.log('Admin WebSocket connection closed');
+    ws.onclose = (event) => {
+      console.log('Admin WebSocket connection closed:', event.code, event.reason);
+      ws = null;
+      // Attempt to reconnect after a delay
+      setTimeout(() => connect(router), 5000);
     };
 
     ws.onerror = (error) => {
       console.error('Admin WebSocket error:', error);
+      ws?.close();
     };
+}
 
-    // Cleanup the connection when the component unmounts
-    return () => {
-      if (ws) {
-        ws.close();
-      }
-    };
-  }, [router]); // router is a stable dependency
+export function useWebSocket() {
+  const router = useRouter();
+
+  useEffect(() => {
+    connect(router);
+
+    // No cleanup function, we want it to persist and reconnect
+  }, [router]); 
 }
