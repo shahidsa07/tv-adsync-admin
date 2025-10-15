@@ -12,16 +12,7 @@ This is a Next.js application for managing digital signage content, built with F
 
 Follow these steps to run the project on your local machine.
 
-### 1. Clone the Repository
-
-If you haven't already, clone the project to your local machine:
-
-```bash
-git clone https://github.com/shahidsa07/tv-adsync-admin.git
-cd tv-adsync-admin
-```
-
-### 2. Install Dependencies
+### 1. Install Dependencies
 
 Install all the necessary npm packages:
 
@@ -29,40 +20,39 @@ Install all the necessary npm packages:
 npm install
 ```
 
-### 3. Start a Local Redis Server
+### 2. Start a Local Redis Server
 
-This project uses Redis for real-time notifications between the server and clients. The easiest way to run Redis locally is with Docker.
+This project uses Redis for real-time notifications. The easiest way to run Redis locally is with Docker. Run this command in a separate terminal window:
 
 ```bash
 docker run -d --name redis-stack -p 6379:6379 -p 8001:8001 redis/redis-stack:latest
 ```
-This command will start a Redis container and make it available on port 6379.
+This command will start a Redis container in the background and make it available on port 6379. You only need to do this once.
 
-### 4. Set Up Environment Variables
+### 3. Set Up Environment Variables
 
-The application uses Firebase and Redis. You need to configure credentials for both.
+The application needs credentials to connect to Firebase and Redis.
 
-- Copy the example environment file:
+- **Copy the example file**: Create a `.env` file by copying the example template.
   ```bash
   cp .env.example .env
   ```
-- Open the newly created `.env` file in your code editor.
-- **Firebase**: Replace the placeholder values with your actual Firebase service account credentials. You can find these in the `service-account.json` file you downloaded from your Firebase project settings.
-- **Redis**: The default Redis URL is already included. If your Redis server runs on a different URL, update `REDIS_URL`.
+- **Open `.env`** in your code editor.
+- **Add Firebase Credentials**:
+    1. Go to your Firebase project settings and click on the "Service accounts" tab.
+    2. Click "Generate new private key" to download a JSON file with your credentials.
+    3. Open the downloaded JSON file and copy the `project_id`, `client_email`, and `private_key` values into your `.env` file.
+    4. **Important**: The `private_key` must be enclosed in double quotes (`"`) and all newline characters (`\n`) must be preserved exactly as they are in the JSON file.
+- **Redis URL**: The default Redis URL is already included in the `.env.example` file and should work with the Docker command above.
 
-**Important**: The `FIREBASE_PRIVATE_KEY` must be enclosed in double quotes (`"`), and all newline characters (`\n`) must be preserved.
+### 4. Run the Application
 
-### 5. Run the Application
-
-Start the development server. The `npm run dev` command starts a single server process that handles both the Next.js application and the WebSocket connections.
+Start the development server. This single command starts both the Next.js application and the WebSocket server.
 
 ```bash
 npm run dev
 ```
 
-### 6. Access the Application
+The application will be available at `http://localhost:9002`.
 
-- **Web Application**: Available at `http://localhost:9002`
-- **WebSocket Server**: Listens on `ws://localhost:9002/ws`
-
-You should see the NextAds dashboard when you navigate to the web application URL. The initial data (TVs, groups, ads) will be seeded into your Firestore database the first time you visit one of the main pages.
+The initial data (TVs, groups, ads) will be seeded into your Firestore database the first time you visit one of the main pages.
