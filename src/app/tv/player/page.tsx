@@ -8,9 +8,6 @@ import type { TV, Playlist, PriorityStream } from '@/lib/definitions';
 import { Loader2, Tv, WifiOff } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
-import getConfig from 'next/config';
-
-const { publicRuntimeConfig } = getConfig();
 
 export const dynamic = 'force-dynamic';
 
@@ -80,9 +77,8 @@ function TVPlayer() {
         return; // Connection already exists
     }
     
-    const siteUrl = new URL(publicRuntimeConfig.siteUrl);
-    const wsProtocol = siteUrl.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${siteUrl.host}/ws`;
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
     
     console.log(`Connecting to WebSocket: ${wsUrl}`);
     const newWs = new WebSocket(wsUrl);
