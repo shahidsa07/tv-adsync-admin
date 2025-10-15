@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch server.ts",
+    "dev": "concurrently \"npm:genkit:dev\" \"next dev -p 9002\" \"tsx watch socket-server.ts\"",
     "genkit:start": "genkit start -- tsx src/ai/dev.ts",
     "genkit:dev": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "NODE_ENV=production next build && tsc --project tsconfig.server.json",
-    "start": "node dist/server.js",
+    "build": "next build && tsc --project tsconfig.server.json",
+    "start": "concurrently \"npm:genkit:start\" \"next start -p 9002\" \"node dist/socket-server.js\"",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },
@@ -38,12 +38,14 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "concurrently": "^8.2.2",
     "date-fns": "^3.6.0",
     "dotenv": "^16.5.0",
     "embla-carousel-react": "^8.6.0",
     "firebase-admin": "^12.2.0",
     "genkit": "^1.14.1",
     "html5-qrcode": "^2.3.8",
+    "http-proxy": "^1.18.1",
     "lucide-react": "^0.475.0",
     "next": "15.3.3",
     "patch-package": "^8.0.0",
@@ -58,6 +60,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/http-proxy": "^1.17.14",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18",

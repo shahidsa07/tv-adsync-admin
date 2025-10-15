@@ -75,7 +75,8 @@ function TVPlayer() {
     }
     
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+    // Connect to the Next.js API route proxy
+    const wsUrl = `${wsProtocol}//${window.location.host}/api/ws`;
     
     console.log(`Connecting to WebSocket: ${wsUrl}`);
     const newWs = new WebSocket(wsUrl);

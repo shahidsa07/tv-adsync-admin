@@ -11,7 +11,8 @@ export function useWebSocket() {
     if (typeof window === 'undefined') return;
 
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+    // Connect to the Next.js API route proxy
+    const wsUrl = `${wsProtocol}//${window.location.host}/api/ws`;
     
     let ws: WebSocket;
 
