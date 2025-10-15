@@ -1,10 +1,13 @@
 'use server';
 
+import { config } from 'dotenv';
+config(); // Load environment variables from .env file FIRST.
+
 import { revalidatePath } from 'next/cache'
 import * as data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
 import type { Ad, Playlist, PriorityStream, TV } from './definitions'
-import { notifyTv, notifyGroup } from './ws-notifications';
+import { notifyTv, notifyGroup, notifyAdmins } from './ws-notifications';
 
 
 // --- Group Actions ---
@@ -12,6 +15,7 @@ import { notifyTv, notifyGroup } from './ws-notifications';
 export async function createGroupAction(name: string) {
   try {
     await data.createGroup(name);
+    await notifyAdmins();
     revalidatePath('/groups');
     revalidatePath('/dashboard');
     return { success: true, message: `Group "${name}" created.` }
@@ -28,6 +32,7 @@ export async function deleteGroupAction(groupId: string) {
             return { success: false, message: "Cannot delete a group that has TVs assigned to it." };
         }
         await data.deleteGroup(groupId);
+        await notifyAdmins();
         revalidatePath('/groups');
         return { success: true, message: "Group deleted successfully." };
     } catch (error) {
@@ -44,7 +49,10 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
         await data.updateGroupTvs(groupId, tvIds);
 
         const allAffectedIds = new Set([...originalTvIds, ...tvIds]);
-        allAffectedIds.forEach(tvId => notifyTv(tvId));
+        for (const tvId of allAffectedIds) {
+          await notifyTv(tvId);
+        }
+        await notifyAdmins();
 
         revalidatePath('/', 'layout');
         return { success: true, message: 'Group TVs updated.' };
@@ -57,7 +65,8 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
 export async function updateGroupPlaylistAction(groupId: string, playlistId: string | null) {
     try {
         await data.updateGroup(groupId, { playlistId });
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
+        await notifyAdmins();
         revalidatePath(`/groups/${groupId}`);
         revalidatePath('/groups');
         return { success: true, message: 'Group playlist updated.' };
@@ -69,7 +78,7 @@ export async function updateGroupPlaylistAction(groupId: string, playlistId: str
 
 export async function forceRefreshGroupAction(groupId: string) {
     try {
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
         return { success: true, message: 'Refresh signal sent to group.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to send refresh signal.'
@@ -95,7 +104,7 @@ export async function registerTvAction(tvId: string, name: string, shopLocation?
 
         await data.createTv(sanitizedTvId, name, shopLocation);
         
-        notifyTv(sanitizedTvId);
+        await notifyAdmins();
 
         revalidatePath('/', 'layout');
         return { success: true, message: `TV "${name}" registered successfully.` };
@@ -108,7 +117,8 @@ export async function registerTvAction(tvId: string, name: string, shopLocation?
 export async function updateTvAction(tvId: string, tvData: Partial<Pick<TV, 'name' | 'shopLocation'>>) {
     try {
         await data.updateTv(tvId, tvData);
-        notifyTv(tvId);
+        await notifyTv(tvId);
+        await notifyAdmins();
         revalidatePath('/', 'layout');
         return { success: true, message: `TV details updated.` };
     } catch (error) {
@@ -124,13 +134,14 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
     const oldGroupId = oldTvData?.groupId;
 
     await data.updateTv(tvId, { groupId });
-    notifyTv(tvId); 
+    await notifyTv(tvId); 
+    await notifyAdmins();
 
     if(oldGroupId) {
-        notifyGroup(oldGroupId);
+        await notifyGroup(oldGroupId);
     }
     if (groupId) {
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
     }
 
     revalidatePath('/', 'layout');
@@ -161,10 +172,10 @@ export async function deleteTvAction(tvId: string) {
     try {
         const tv = await data.getTvById(tvId);
         if (tv) {
-            notifyTv(tv.tvId);
+            await notifyTv(tv.tvId);
         }
         await data.deleteTv(tvId);
-
+        await notifyAdmins();
         revalidatePath('/', 'layout');
         return { success: true, message: 'TV deleted successfully.' };
     } catch (error) {
@@ -178,7 +189,7 @@ export async function deleteTvAction(tvId: string) {
 export async function startPriorityStreamAction(groupId: string, stream: PriorityStream) {
     try {
         await data.updatePriorityStream(groupId, stream);
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Priority stream started.' };
     } catch (error) {
@@ -190,7 +201,7 @@ export async function startPriorityStreamAction(groupId: string, stream: Priorit
 export async function stopPriorityStreamAction(groupId: string) {
     try {
         await data.updatePriorityStream(groupId, null);
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Priority stream stopped.' };
     } catch (error) {
@@ -205,6 +216,7 @@ export async function stopPriorityStreamAction(groupId: string) {
 export async function createAdAction(name: string, type: 'image' | 'video', url: string, duration?: number, tags?: string[]) {
     try {
         await data.createAd(name, type, url, duration, tags);
+        await notifyAdmins();
         revalidatePath('/ads');
         revalidatePath('/playlists', 'layout'); 
         return { success: true, message: 'Ad created successfully.' };
@@ -226,7 +238,10 @@ export async function updateAdAction(adId: string, adData: Partial<Pick<Ad, 'nam
                 groups.forEach(group => affectedGroups.add(group.id));
             }
         }
-        affectedGroups.forEach(groupId => notifyGroup(groupId));
+        for (const groupId of affectedGroups) {
+          await notifyGroup(groupId);
+        }
+        await notifyAdmins();
 
         revalidatePath('/ads');
         revalidatePath('/playlists', 'layout');
@@ -252,7 +267,10 @@ export async function deleteAdAction(adId: string) {
         
         await data.deleteAd(adId);
         
-        affectedGroups.forEach(groupId => notifyGroup(groupId));
+        for (const groupId of affectedGroups) {
+          await notifyGroup(groupId);
+        }
+        await notifyAdmins();
 
         revalidatePath('/ads');
         revalidatePath('/playlists', 'layout');
@@ -268,6 +286,7 @@ export async function deleteAdAction(adId: string) {
 export async function createPlaylistAction(name: string) {
     try {
         const playlist = await data.createPlaylist(name);
+        await notifyAdmins();
         revalidatePath('/playlists');
         if (playlist) {
              revalidatePath(`/playlists/${playlist.id}`);
@@ -286,7 +305,10 @@ export async function deletePlaylistAction(playlistId: string) {
         
         await data.deletePlaylist(playlistId);
         
-        groups.forEach(group => notifyGroup(group.id));
+        for (const group of groups) {
+            await notifyGroup(group.id);
+        }
+        await notifyAdmins();
         
         revalidatePath('/playlists');
         revalidatePath('/groups', 'layout');
@@ -301,7 +323,9 @@ export async function updatePlaylistAdsAction(playlistId: string, adIds: string[
     try {
         await data.updatePlaylist(playlistId, { adIds });
         const groups = await data.getGroupsByPlaylistId(playlistId);
-        groups.forEach(group => notifyGroup(group.id));
+        for (const group of groups) {
+            await notifyGroup(group.id);
+        }
         revalidatePath(`/playlists/${playlistId}`);
         return { success: true, message: 'Playlist updated.' };
     } catch (error) {
