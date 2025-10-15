@@ -52,3 +52,4 @@ This application is configured for easy deployment to Firebase App Hosting.
 3.  **Deploy:** After connecting, App Hosting will automatically build and deploy your application on every push to your main branch. Your `apphosting.yaml` file is already configured for this process.
 
 Your application will be available at the URL provided by Firebase App Hosting.
+//
