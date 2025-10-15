@@ -24,6 +24,10 @@ app.prepare().then(() => {
   const server = createServer((req, res) => {
     try {
       const parsedUrl = parse(req.url!, true);
+       // Let the upgrade handler deal with websockets
+      if (parsedUrl.pathname === '/ws') {
+        return;
+      }
       handle(req, res, parsedUrl);
     } catch (err) {
       console.error('Error handling request:', err);
@@ -166,19 +170,21 @@ app.prepare().then(() => {
     });
 
     ws.on('close', async () => {
-      if (clientType === 'admin') {
-        adminConnections.delete(ws);
-        console.log('Admin client disconnected');
-      } else if (clientType === 'tv' && clientId) {
-        const currentClientId = clientId; // Use a local copy
-        console.log(`TV client disconnected: ${currentClientId}`);
-        if (tvConnections.get(currentClientId) === ws) {
-          tvConnections.delete(currentClientId);
-          await handleTvConnection(currentClientId, false);
+        if (clientType === 'admin') {
+            adminConnections.delete(ws);
+            console.log('Admin client disconnected');
+        } else if (clientType === 'tv' && clientId) {
+            const currentClientId = clientId; // Use a local copy
+            console.log(`TV client disconnected: ${currentClientId}`);
+            // Only update status if the connection that just closed is the one we have stored.
+            // This prevents a race condition where a new connection is established before the old one is marked as closed.
+            if (tvConnections.get(currentClientId) === ws) {
+                tvConnections.delete(currentClientId);
+                await handleTvConnection(currentClientId, false);
+            }
+        } else {
+            console.log('An unidentified client disconnected');
         }
-      } else {
-        console.log('An unidentified client disconnected');
-      }
     });
 
     ws.on('error', (error) => {
