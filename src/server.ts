@@ -9,8 +9,6 @@ config(); // Load .env variables
 const PORT = 9003;
 const wss = new WebSocketServer({ port: PORT });
 
-console.log(`WebSocket server started on port ${PORT}`);
-
 // Store connections in memory.
 // In a real, scalable production app, you'd use a shared store like Redis.
 const tvConnections = new Map<string, WebSocket>();
@@ -33,6 +31,9 @@ setNotificationCallback((notification) => {
         });
     }
 });
+
+console.log(`WebSocket server started on port ${PORT}`);
+
 
 const handleTvConnection = async (tvId: string, isConnecting: boolean) => {
     try {
