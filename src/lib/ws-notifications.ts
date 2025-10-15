@@ -5,7 +5,19 @@ import { getTvsByGroupId } from './data';
 // In a real, scalable production environment, you would use a proper message queue
 // like Google Cloud Pub/Sub, Redis Pub/Sub, or another message broker.
 type Notification = { type: 'tv', id: string } | { type: 'group', id: string } | { type: 'all-admins' };
+
+// This is the single, crucial change. We move the callback setup to the top level.
 let notificationCallback: ((notification: Notification) => void) | null = null;
+setImmediate(() => {
+    if (typeof (global as any).setNotificationCallback === 'function') {
+        (global as any).setNotificationCallback((notification: Notification) => {
+             if (notificationCallback) {
+                notificationCallback(notification);
+            }
+        });
+    }
+});
+
 
 export function setNotificationCallback(callback: (notification: Notification) => void) {
     notificationCallback = callback;

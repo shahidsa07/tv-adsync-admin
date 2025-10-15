@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 let ws: WebSocket | null = null;
-const WEBSOCKET_URL = 'ws://localhost:9003';
+const WEBSOCKET_PATH = '/ws'; 
 
 const connect = (router: any) => {
     if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
@@ -14,11 +14,15 @@ const connect = (router: any) => {
     }
     
     if (typeof window === 'undefined') return;
+
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    // The WebSocket now connects to the same host and port as the main application.
+    const websocketUrl = `${protocol}//${window.location.host}${WEBSOCKET_PATH}`;
     
-    console.log(`Attempting to connect to WebSocket at ${WEBSOCKET_URL}`);
+    console.log(`Attempting to connect to WebSocket at ${websocketUrl}`);
 
     try {
-        ws = new WebSocket(WEBSOCKET_URL);
+        ws = new WebSocket(websocketUrl);
     } catch(e) {
         console.error("Could not create WebSocket connection to server", e);
         return;
@@ -46,7 +50,6 @@ const connect = (router: any) => {
     ws.onclose = (event) => {
       console.log('Admin WebSocket connection closed:', event.code, event.reason);
       ws = null;
-      // Attempt to reconnect after a delay
       setTimeout(() => connect(router), 5000);
     };
 
@@ -60,11 +63,8 @@ export function useWebSocket() {
   const router = useRouter();
 
   useEffect(() => {
-    // Ensure this only runs on the client
     if (typeof window !== 'undefined') {
       connect(router);
     }
-
-    // No cleanup function, we want it to persist and reconnect
   }, [router]); 
 }
