@@ -10,12 +10,10 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const isProduction = process.env.NODE_ENV === 'production';
-    const wsProtocol = isProduction ? 'wss:' : 'ws:';
-    
-    // In production, connect to the same host on the standard port. In dev, connect to the dedicated socket server port.
-    const wsHost = isProduction ? window.location.host : 'localhost:9001';
-    const wsUrl = `${wsProtocol}//${wsHost}`;
+    // Use a relative path for the WebSocket. The browser will automatically resolve
+    // this to ws://localhost:PORT/ws in development and wss://your-domain/ws in production.
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
     
     let ws: WebSocket;
 
@@ -45,8 +43,8 @@ export function useWebSocket() {
       }
     };
 
-    ws.onclose = () => {
-      console.log('Admin WebSocket connection closed');
+    ws.onclose = (event) => {
+      console.log('Admin WebSocket connection closed', event.code, event.reason);
     };
 
     ws.onerror = (error) => {
@@ -55,7 +53,8 @@ export function useWebSocket() {
 
     return () => {
       if (ws) {
-        ws.close();
+        // Use a 1000 code for normal closure
+        ws.close(1000, "Admin component unmounting");
       }
     };
   }, [router]);

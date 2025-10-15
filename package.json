@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm:genkit:dev\" \"next dev -p 9002\" \"tsx watch socket-server.ts\"",
+    "dev": "tsx watch socket-server.ts",
     "genkit:start": "genkit start -- tsx src/ai/dev.ts",
     "genkit:dev": "genkit start -- tsx --watch src/ai/dev.ts",
     "build": "next build && tsc --project tsconfig.server.json",
-    "start": "concurrently \"npm:genkit:start\" \"next start -p 9002\" \"node dist/socket-server.js\"",
+    "start": "node dist/socket-server.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit"
   },

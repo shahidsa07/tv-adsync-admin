@@ -74,11 +74,10 @@ function TVPlayer() {
         return; // Connection already exists
     }
     
-    const isProduction = process.env.NODE_ENV === 'production';
-    const wsProtocol = isProduction ? 'wss:' : 'ws:';
-    // In production, connect to the same host on the standard port. In dev, connect to the dedicated socket server port.
-    const wsHost = isProduction ? window.location.host : 'localhost:9001';
-    const wsUrl = `${wsProtocol}//${wsHost}`;
+    // Use a relative path for the WebSocket. The browser will automatically resolve
+    // this to ws://localhost:PORT/ws in development and wss://your-domain/ws in production.
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
     
     console.log(`Connecting to WebSocket: ${wsUrl}`);
     const newWs = new WebSocket(wsUrl);
@@ -97,9 +96,9 @@ function TVPlayer() {
     };
 
     newWs.onclose = (event) => {
-      console.log('WebSocket connection closed.', event.reason);
+      console.log('WebSocket connection closed.', event.code, event.reason);
       setWs(null); // Clear the ws state to allow reconnection
-      setTimeout(setupWebSocket, WEBSOCKET_RECONNECT_INTERVAL);
+      setTimeout(() => setupWebSocket(), WEBSOCKET_RECONNECT_INTERVAL);
     };
 
     newWs.onerror = (error) => {
@@ -157,8 +156,11 @@ function TVPlayer() {
 
     return () => {
       clearInterval(pollingInterval);
-      if (ws) ws.close();
+      if (ws) {
+        ws.close(1000, "TV Player component unmounting");
+      }
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvId]);
 
   // QR Code Generation
@@ -188,7 +190,7 @@ function TVPlayer() {
       const timer = setTimeout(advanceAd, duration);
       return () => clearTimeout(timer);
     }
-  }, [currentAdIndex, state]);
+  }, [currentAdIndex, state, advanceAd]);
 
 
   // --- Render Logic ---
@@ -261,7 +263,7 @@ function TVPlayer() {
   return (
     <div className="fixed inset-0 bg-black">
       {currentAd.type === 'image' ? (
-        <Image src={currentAd.url} alt={currentAd.name} layout="fill" objectFit="cover" quality={100} priority />
+        <Image src={currentAd.url} alt={currentAd.name} fill objectFit="cover" quality={100} priority />
       ) : (
         <video
           key={currentAd.url} // Re-mount the video element when the source changes
