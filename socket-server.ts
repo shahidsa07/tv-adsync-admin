@@ -160,4 +160,3 @@ setupNotificationWatcher();
 server.listen(port, () => {
     console.log(`[Socket Server] WebSocket server listening on port ${port}`);
 });
-
