@@ -47,7 +47,12 @@ This command will start the combined Next.js application and WebSocket server.
 npm run dev
 ```
 
-The application will be available at `http://localhost:9002`.
-The WebSocket server will be available at `ws://localhost:9002/ws`.
-
 The initial data (TVs, groups, ads) will be seeded into your Firestore database the first time you visit one of the main pages.
+
+### Local Endpoints
+
+- **Admin Web App**: `http://localhost:9002`
+- **API Endpoint Example**: `http://localhost:9002/api/tv-state/[tvId]`
+- **WebSocket Server**: `ws://localhost:9002/ws`
+
+When connecting from a client on the same network (e.g., a TV player app), replace `localhost` with your computer's local IP address (e.g., `192.168.1.100`).
