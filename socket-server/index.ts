@@ -1,3 +1,4 @@
+
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import chokidar from 'chokidar';
@@ -135,16 +136,16 @@ wss.on('connection', (ws) => {
             adminConnections.delete(ws);
             console.log('[Socket Server] Admin client disconnected.');
         } else if (clientType === 'tv' && clientId) {
-            const currentClientId = clientId;
-            if (tvConnections.get(currentClientId) === ws) {
-                tvConnections.delete(currentClientId);
-                console.log(`[Socket Server] TV disconnected: ${currentClientId}`);
+            // Check if the closing websocket is the one we have on record
+            if (tvConnections.get(clientId) === ws) {
+                tvConnections.delete(clientId);
+                console.log(`[Socket Server] TV disconnected: ${clientId}`);
                 
-                 // Notify main app that TV is offline
-                 await fs.promises.writeFile(path.join(NOTIFICATION_DIR, `status-${currentClientId}-off.json`), JSON.stringify({
-                      type: 'status-change',
-                      payload: { tvId: currentClientId, isOnline: false }
-                    }));
+                // Notify main app that TV is offline
+                await fs.promises.writeFile(path.join(NOTIFICATION_DIR, `status-${clientId}-off.json`), JSON.stringify({
+                    type: 'status-change',
+                    payload: { tvId: clientId, isOnline: false }
+                }));
             }
         }
     });
