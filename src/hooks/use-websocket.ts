@@ -9,17 +9,14 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const getWebSocketURL = () => {
-      if (process.env.NODE_ENV === 'production') {
-        const host = window.location.host;
-        return `wss://${host}/ws`;
-      } else {
-        // Assume the dev server is on localhost:3000
-        return 'ws://localhost:3000/ws';
-      }
-    };
+    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL;
+    console.error("NEXT_PUBLIC_WEBSOCKET_URL is.", wsUrl);
+
+    if (!wsUrl) {
+      console.error("NEXT_PUBLIC_WEBSOCKET_URL is not defined. Cannot initialize admin WebSocket.");
+      return;
+    }
     
-    const wsUrl = getWebSocketURL();
     let ws: WebSocket;
 
     try {
