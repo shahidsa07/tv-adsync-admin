@@ -4,9 +4,9 @@ steps:
   args:
     - 'run'
     - 'deploy'
-    - 'nextads-server'
+    - 'nextads-socket-server' # A distinct name for the WebSocket service
     - '--source'
-    - '.'
+    - './socket-server' # Deploy only the socket-server directory
     - '--region'
     - 'asia-south1'
     - '--allow-unauthenticated'

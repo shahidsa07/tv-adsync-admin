@@ -1,6 +1,7 @@
-'server-only';
+'use server-only';
 import fs from 'fs/promises';
 import path from 'path';
+import { getTvsByGroupId } from './data';
 
 const NOTIFICATION_DIR = path.join(process.cwd(), '.notifications');
 
@@ -19,7 +20,17 @@ export const notifyTv = (tvId: string) => {
     return sendNotification({ type: 'tv', id: tvId });
 }
 
-export const notifyGroup = (groupId: string) => {
+export const notifyGroup = async (groupId: string) => {
     console.log(`Queueing notification for Group: ${groupId}`);
-    return sendNotification({ type: 'group', id: groupId });
+    const tvs = await getTvsByGroupId(groupId);
+    // The standalone socket server doesn't know about groups,
+    // so we must notify each TV in the group individually.
+    for (const tv of tvs) {
+        await notifyTv(tv.tvId);
+    }
+}
+
+export const notifyStatusChange = (payload: { tvId: string, isOnline: boolean }) => {
+    console.log(`Queueing status change notification for TV: ${payload.tvId}`);
+    return sendNotification({ type: 'status-change', payload });
 }

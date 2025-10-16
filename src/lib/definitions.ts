@@ -22,7 +22,7 @@ export interface TV {
   tvId: string;
   name: string;
   groupId: string | null;
-  socketId: string | null;
+  isOnline: boolean;
   shopLocation?: string;
 }
 

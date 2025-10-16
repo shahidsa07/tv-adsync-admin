@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache'
 import * as data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
 import type { Ad, Playlist, PriorityStream, TV } from './definitions'
-import { notifyTv, notifyGroup } from './ws-notifications';
+import { notifyTv, notifyGroup, notifyStatusChange } from './ws-notifications';
 
 
 // --- Group Actions ---
@@ -38,14 +38,17 @@ export async function deleteGroupAction(groupId: string) {
 
 export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
     try {
-        // Find which TVs were removed to notify them
         const originalTvs = await data.getTvsByGroupId(groupId);
         const originalTvIds = originalTvs.map(tv => tv.tvId);
         
         await data.updateGroupTvs(groupId, tvIds);
 
         const allAffectedIds = new Set([...originalTvIds, ...tvIds]);
-        allAffectedIds.forEach(tvId => notifyTv(tvId));
+        
+        // Notify each affected TV individually
+        for (const tvId of allAffectedIds) {
+            await notifyTv(tvId);
+        }
 
         revalidatePath('/', 'layout');
         return { success: true, message: 'Group TVs updated.' };
@@ -58,7 +61,7 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
 export async function updateGroupPlaylistAction(groupId: string, playlistId: string | null) {
     try {
         await data.updateGroup(groupId, { playlistId });
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`);
         revalidatePath('/groups');
         return { success: true, message: 'Group playlist updated.' };
@@ -70,7 +73,7 @@ export async function updateGroupPlaylistAction(groupId: string, playlistId: str
 
 export async function forceRefreshGroupAction(groupId: string) {
     try {
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
         return { success: true, message: 'Refresh signal sent to group.' };
     } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to send refresh signal.'
@@ -83,7 +86,6 @@ export async function forceRefreshGroupAction(groupId: string) {
 
 export async function registerTvAction(tvId: string, name: string, shopLocation?: string) {
     try {
-        // Sanitize the TV ID to make it Firestore-safe
         const sanitizedTvId = tvId.trim().replace(/\//g, '_');
         
         if (!sanitizedTvId) {
@@ -97,8 +99,7 @@ export async function registerTvAction(tvId: string, name: string, shopLocation?
 
         await data.createTv(sanitizedTvId, name, shopLocation);
         
-        // Notify the websocket server to update the status if the TV is already connected
-        notifyTv(sanitizedTvId);
+        await notifyTv(sanitizedTvId);
 
         revalidatePath('/', 'layout');
         return { success: true, message: `TV "${name}" registered successfully.` };
@@ -111,7 +112,7 @@ export async function registerTvAction(tvId: string, name: string, shopLocation?
 export async function updateTvAction(tvId: string, tvData: Partial<Pick<TV, 'name' | 'shopLocation'>>) {
     try {
         await data.updateTv(tvId, tvData);
-        notifyTv(tvId);
+        await notifyTv(tvId);
         revalidatePath('/', 'layout');
         return { success: true, message: `TV details updated.` };
     } catch (error) {
@@ -127,17 +128,16 @@ export async function assignTvToGroupAction(tvId: string, groupId: string | null
     const oldGroupId = oldTvData?.groupId;
 
     await data.updateTv(tvId, { groupId });
-    notifyTv(tvId); // Notify the TV that was moved
+    await notifyTv(tvId); // Notify the TV that was moved
 
     // Also notify the group it was removed from, if any
     if(oldGroupId) {
-        notifyGroup(oldGroupId);
+        await notifyGroup(oldGroupId);
     }
      // Also notify the group it was added to
     if (groupId) {
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
     }
-
 
     revalidatePath('/', 'layout');
 
@@ -164,12 +164,12 @@ export async function removeFromGroupAction(tvId: string) {
 }
 
 
-export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean, socketId: string | null) {
+export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean) {
     try {
-        await data.setTvOnlineStatus(tvId, isOnline, socketId);
-        
-        // This revalidation seems to not be enough to trigger a client-side update
-        // for a page that is already being viewed.
+        await data.setTvOnlineStatus(tvId, isOnline);
+        await notifyStatusChange({ tvId, isOnline });
+
+        // Revalidate paths to update UI
         revalidatePath(`/dashboard`);
         revalidatePath(`/tvs`);
         revalidatePath(`/groups`);
@@ -184,10 +184,8 @@ export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean, s
 export async function deleteTvAction(tvId: string) {
     try {
         const tv = await data.getTvById(tvId);
-        // We notify the TV before deleting it from the database.
-        // The client should handle this gracefully (e.g. show registration screen).
         if (tv) {
-            notifyTv(tv.tvId);
+            await notifyTv(tv.tvId);
         }
         await data.deleteTv(tvId);
 
@@ -204,7 +202,7 @@ export async function deleteTvAction(tvId: string) {
 export async function startPriorityStreamAction(groupId: string, stream: PriorityStream) {
     try {
         await data.updatePriorityStream(groupId, stream);
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Priority stream started.' };
     } catch (error) {
@@ -216,7 +214,7 @@ export async function startPriorityStreamAction(groupId: string, stream: Priorit
 export async function stopPriorityStreamAction(groupId: string) {
     try {
         await data.updatePriorityStream(groupId, null);
-        notifyGroup(groupId);
+        await notifyGroup(groupId);
         revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Priority stream stopped.' };
     } catch (error) {
@@ -252,7 +250,10 @@ export async function updateAdAction(adId: string, adData: Partial<Pick<Ad, 'nam
                 groups.forEach(group => affectedGroups.add(group.id));
             }
         }
-        affectedGroups.forEach(groupId => notifyGroup(groupId));
+        
+        for (const groupId of affectedGroups) {
+          await notifyGroup(groupId);
+        }
 
         revalidatePath('/ads');
         revalidatePath('/playlists', 'layout');
@@ -270,7 +271,6 @@ export async function deleteAdAction(adId: string) {
         if (playlists) {
             for (const playlist of playlists) {
                 if (playlist.adIds.includes(adId)) {
-                    // This playlist is affected. Find groups using it.
                     const groups = await data.getGroupsByPlaylistId(playlist.id);
                     groups.forEach(group => affectedGroups.add(group.id));
                 }
@@ -279,7 +279,9 @@ export async function deleteAdAction(adId: string) {
         
         await data.deleteAd(adId);
         
-        affectedGroups.forEach(groupId => notifyGroup(groupId));
+        for (const groupId of affectedGroups) {
+          await notifyGroup(groupId);
+        }
 
         revalidatePath('/ads');
         revalidatePath('/playlists', 'layout');
@@ -313,7 +315,9 @@ export async function deletePlaylistAction(playlistId: string) {
         
         await data.deletePlaylist(playlistId);
         
-        groups.forEach(group => notifyGroup(group.id));
+        for (const group of groups) {
+          await notifyGroup(group.id);
+        }
         
         revalidatePath('/playlists');
         revalidatePath('/groups', 'layout');
@@ -328,7 +332,11 @@ export async function updatePlaylistAdsAction(playlistId: string, adIds: string[
     try {
         await data.updatePlaylist(playlistId, { adIds });
         const groups = await data.getGroupsByPlaylistId(playlistId);
-        groups.forEach(group => notifyGroup(group.id));
+        
+        for (const group of groups) {
+          await notifyGroup(group.id);
+        }
+
         revalidatePath(`/playlists/${playlistId}`);
         return { success: true, message: 'Playlist updated.' };
     } catch (error) {

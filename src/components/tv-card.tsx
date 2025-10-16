@@ -25,7 +25,7 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
   const [isRemoving, startRemoveTransition] = useTransition();
   const { toast } = useToast();
 
-  const isOnline = !!tv.socketId;
+  const isOnline = tv.isOnline;
   const group = groups.find(g => g.id === tv.groupId);
 
   const handleDelete = () => {

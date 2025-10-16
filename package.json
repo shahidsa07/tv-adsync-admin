@@ -3,13 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "tsx watch server.ts",
-    "genkit:start": "genkit start -- tsx src/ai/dev.ts",
-    "genkit:dev": "genkit start -- tsx --watch src/ai/dev.ts",
-    "build": "next build && tsc --project tsconfig.server.json",
-    "start": "node dist/server.js",
+    "dev": "concurrently \"npm:dev:next\" \"npm:dev:socket\"",
+    "dev:next": "next dev -p 3000",
+    "dev:socket": "tsx watch socket-server/index.ts",
+    "build": "next build",
+    "start": "next start -p 8080",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "postinstall": "cd socket-server && npm install"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
@@ -54,7 +55,6 @@
     "recharts": "^2.15.1",
     "tailwind-merge": "^3.0.1",
     "tailwindcss-animate": "^1.0.7",
-    "ws": "^8.18.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -62,8 +62,7 @@
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "@types/ws": "^8.5.11",
-    "chokidar": "^3.6.0",
+    "concurrently": "^8.2.2",
     "genkit-cli": "^1.14.1",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",

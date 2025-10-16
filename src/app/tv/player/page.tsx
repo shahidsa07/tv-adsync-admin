@@ -28,7 +28,7 @@ function TVPlayer() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const [ws, setWs] = useState<WebSocket | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
   const adStartTimeRef = useRef<number | null>(null);
 
   // --- Data Fetching and State Management ---
@@ -66,53 +66,63 @@ function TVPlayer() {
 
 
   // --- WebSocket Connection ---
-  const setupWebSocket = () => {
+  useEffect(() => {
     if (!tvId) return;
-    if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) {
-        return; // Connection already exists
+
+    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL;
+    if (!wsUrl) {
+      console.error("NEXT_PUBLIC_WEBSOCKET_URL is not defined.");
+      setError("WebSocket URL is not configured.");
+      return;
     }
-    
-    const getWebSocketURL = () => {
-      if (process.env.NODE_ENV === 'production') {
-        const host = window.location.host;
-        return `wss://${host}/ws`;
-      } else {
-        // Assume the dev server is on localhost:3000
-        return 'ws://localhost:3000/ws';
+
+    let reconnectInterval: NodeJS.Timeout;
+
+    function connect() {
+      if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
+        return; // Already connected or connecting
+      }
+
+      console.log(`Connecting to WebSocket: ${wsUrl}`);
+      const newWs = new WebSocket(wsUrl);
+
+      newWs.onopen = () => {
+        console.log('WebSocket connection established.');
+        newWs.send(JSON.stringify({ type: 'register', payload: { tvId } }));
+      };
+
+      newWs.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        console.log('WebSocket message received:', message);
+        if (message.type === 'REFRESH_STATE') {
+          fetchState();
+        }
+      };
+
+      newWs.onclose = (event) => {
+        console.log('WebSocket connection closed.', event.code, event.reason);
+        wsRef.current = null;
+        reconnectInterval = setTimeout(connect, WEBSOCKET_RECONNECT_INTERVAL);
+      };
+
+      newWs.onerror = (error) => {
+        console.error('WebSocket error:', error);
+        newWs.close(); // Triggers onclose and reconnection attempt
+      };
+
+      wsRef.current = newWs;
+    }
+
+    connect();
+
+    return () => {
+      clearTimeout(reconnectInterval);
+      if (wsRef.current) {
+        wsRef.current.close(1000, "TV Player component unmounting");
       }
     };
-    
-    const wsUrl = getWebSocketURL();
-    
-    console.log(`Connecting to WebSocket: ${wsUrl}`);
-    const newWs = new WebSocket(wsUrl);
-
-    newWs.onopen = () => {
-      console.log('WebSocket connection established.');
-      newWs.send(JSON.stringify({ type: 'register', payload: { tvId } }));
-    };
-
-    newWs.onmessage = (event) => {
-      const message = JSON.parse(event.data);
-      console.log('WebSocket message received:', message);
-      if (message.type === 'REFRESH_STATE') {
-        fetchState();
-      }
-    };
-
-    newWs.onclose = (event) => {
-      console.log('WebSocket connection closed.', event.code, event.reason);
-      setWs(null); // Clear the ws state to allow reconnection
-      setTimeout(() => setupWebSocket(), WEBSOCKET_RECONNECT_INTERVAL);
-    };
-
-    newWs.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      newWs.close(); // This will trigger the onclose handler for reconnection
-    };
-    
-    setWs(newWs);
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tvId]);
   
   
   // --- Ad Playback & Analytics ---
@@ -152,18 +162,13 @@ function TVPlayer() {
 
   // --- Effects ---
 
-  // Initial fetch and setup polling/websockets
+  // Initial fetch and setup polling
   useEffect(() => {
     fetchState();
     const stateRefreshInterval = setInterval(fetchState, 60000); // Poll every 60 seconds as a fallback
     
-    setupWebSocket();
-
     return () => {
       clearInterval(stateRefreshInterval);
-      if (ws) {
-        ws.close(1000, "TV Player component unmounting");
-      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvId]);

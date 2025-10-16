@@ -33,7 +33,6 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
 
   useEffect(() => {
     if (open) {
-      // We start with only the currently assigned TVs selected.
       setSelectedTvIds(currentlyAssignedIds);
       setSearchTerm("");
     }
@@ -47,8 +46,6 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
 
   const handleSubmit = () => {
     startTransition(async () => {
-      // The final list of IDs for the group is the list of TVs that were *already* in the group,
-      // plus the newly selected ones from the unassigned list.
       const result = await updateGroupTvsAction(group.id, selectedTvIds);
       if (result.success) {
         toast({ title: "Success", description: result.message });
@@ -61,22 +58,22 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
 
   const filteredTvs = useMemo(() => {
     const lowercasedTerm = searchTerm.toLowerCase();
-    // Only show TVs that are not assigned to any group
+    // Only show TVs that are not assigned to any other group
     return allTvs
-      .filter(tv => tv.groupId === null)
+      .filter(tv => tv.groupId === null || tv.groupId === group.id)
       .filter(tv => 
           tv.name.toLowerCase().includes(lowercasedTerm) ||
           (tv.shopLocation && tv.shopLocation.toLowerCase().includes(lowercasedTerm))
       );
-  }, [allTvs, searchTerm]);
+  }, [allTvs, searchTerm, group.id]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="font-headline">Add TVs to {group.name}</DialogTitle>
+          <DialogTitle className="font-headline">Manage TVs for {group.name}</DialogTitle>
           <DialogDescription>
-            Select available (unassigned) TVs to add to this group.
+            Select which TVs belong to this group.
           </DialogDescription>
         </DialogHeader>
         
@@ -113,8 +110,8 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
                                 )}
                             </div>
                         </div>
-                        <Badge variant={tv.socketId ? 'default' : 'secondary'} className={tv.socketId ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}>
-                          {tv.socketId ? 'Online' : 'Offline'}
+                        <Badge variant={tv.isOnline ? 'default' : 'secondary'} className={tv.isOnline ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}>
+                          {tv.isOnline ? 'Online' : 'Offline'}
                         </Badge>
                     </div>
             )) : (

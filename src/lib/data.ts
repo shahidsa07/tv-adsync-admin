@@ -72,7 +72,7 @@ export const getPlaylistsContainingAd = async(adId: string): Promise<Playlist[]>
 // TV Mutations
 export const createTv = async (tvId: string, name: string, shopLocation?: string): Promise<TV | undefined> => {
   if (!db) return undefined;
-  const newTv: TV = { tvId, name: name || tvId, groupId: null, socketId: null };
+  const newTv: TV = { tvId, name: name || tvId, groupId: null, isOnline: false };
   if (shopLocation) {
     newTv.shopLocation = shopLocation;
   }
@@ -94,17 +94,15 @@ export const deleteTv = async (tvId: string): Promise<boolean> => {
     return true;
 }
 
-export const setTvOnlineStatus = async (tvId: string, isOnline: boolean, socketId: string | null): Promise<TV | undefined> => {
+export const setTvOnlineStatus = async (tvId: string, isOnline: boolean): Promise<TV | undefined> => {
     if (!db) return undefined;
     const docRef = db.collection("tvs").doc(tvId);
-    // Check if the document exists before trying to update it
     const docSnap = await docRef.get();
     if (!docSnap.exists) {
         console.log(`TV ${tvId} not found in database, skipping status update.`);
         return undefined;
     }
-    await docRef.update({ socketId });
-    // Re-fetch the document to return the updated state
+    await docRef.update({ isOnline });
     const updatedDocSnap = await docRef.get();
     return updatedDocSnap.data() as TV;
 };
@@ -176,7 +174,6 @@ export const updateAd = async (adId: string, data: Partial<Pick<Ad, 'name' | 'ty
     
     const updateData: any = { ...data };
     if (data.type === 'video') {
-        // Ensure duration is removed for videos
         updateData.duration = FieldValue.delete();
     }
     
@@ -191,7 +188,6 @@ export const deleteAd = async (adId: string): Promise<boolean> => {
     const adRef = db.collection("ads").doc(adId);
     batch.delete(adRef);
 
-    // Remove the ad from all playlists that contain it
     const playlistsSnapshot = await db.collection("playlists").where("adIds", "array-contains", adId).get();
     playlistsSnapshot.forEach(doc => {
         const playlistRef = db.collection("playlists").doc(doc.id);
@@ -225,7 +221,6 @@ export const deletePlaylist = async (playlistId: string): Promise<boolean> => {
     const playlistRef = db.collection("playlists").doc(playlistId);
     batch.delete(playlistRef);
 
-    // Unset this playlist from any groups that are using it.
     const groupsSnapshot = await db.collection('groups').where('playlistId', '==', playlistId).get();
     groupsSnapshot.forEach(doc => {
         const groupRef = db.collection('groups').doc(doc.id);
@@ -245,7 +240,6 @@ export const getAnalyticsSettings = async (): Promise<AnalyticsSettings> => {
     if (docSnap.exists) {
         return docSnap.data() as AnalyticsSettings;
     }
-    // Default to disabled if not set
     return { isTrackingEnabled: false };
 };
 
@@ -281,7 +275,7 @@ export const getAdPerformance = async (period: AdPerformanceDataPeriod = 'all'):
             startTimestamp = startOfDay(now).getTime();
             break;
         case 'week':
-            startTimestamp = startOfWeek(now, { weekStartsOn: 1 }).getTime(); // Monday as start of week
+            startTimestamp = startOfWeek(now, { weekStartsOn: 1 }).getTime();
             break;
         case 'month':
             startTimestamp = startOfMonth(now).getTime();
