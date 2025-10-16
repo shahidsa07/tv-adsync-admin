@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useRef, Suspense } from 'react';
@@ -19,7 +18,6 @@ interface TvState {
   priorityStream: PriorityStream | null;
 }
 
-const POLLING_INTERVAL = 15000; // 15 seconds
 const WEBSOCKET_RECONNECT_INTERVAL = 5000; // 5 seconds
 
 function TVPlayer() {
@@ -74,7 +72,17 @@ function TVPlayer() {
         return; // Connection already exists
     }
     
-    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL!;
+    const getWebSocketURL = () => {
+      if (process.env.NODE_ENV === 'production') {
+        const host = window.location.host;
+        return `wss://${host}/ws`;
+      } else {
+        // Assume the dev server is on localhost:3000
+        return 'ws://localhost:3000/ws';
+      }
+    };
+    
+    const wsUrl = getWebSocketURL();
     
     console.log(`Connecting to WebSocket: ${wsUrl}`);
     const newWs = new WebSocket(wsUrl);
@@ -147,12 +155,12 @@ function TVPlayer() {
   // Initial fetch and setup polling/websockets
   useEffect(() => {
     fetchState();
+    const stateRefreshInterval = setInterval(fetchState, 60000); // Poll every 60 seconds as a fallback
+    
     setupWebSocket();
 
-    const pollingInterval = setInterval(fetchState, POLLING_INTERVAL);
-
     return () => {
-      clearInterval(pollingInterval);
+      clearInterval(stateRefreshInterval);
       if (ws) {
         ws.close(1000, "TV Player component unmounting");
       }
@@ -187,7 +195,8 @@ function TVPlayer() {
       const timer = setTimeout(advanceAd, duration);
       return () => clearTimeout(timer);
     }
-  }, [currentAdIndex, state, advanceAd]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentAdIndex, state]);
 
 
   // --- Render Logic ---

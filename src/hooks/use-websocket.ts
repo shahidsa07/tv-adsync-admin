@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useEffect } from 'react';
@@ -10,11 +9,21 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL!;
+    const getWebSocketURL = () => {
+      if (process.env.NODE_ENV === 'production') {
+        const host = window.location.host;
+        return `wss://${host}/ws`;
+      } else {
+        // Assume the dev server is on localhost:3000
+        return 'ws://localhost:3000/ws';
+      }
+    };
     
+    const wsUrl = getWebSocketURL();
     let ws: WebSocket;
 
     try {
+        console.log(`Attempting to connect Admin WebSocket to: ${wsUrl}`);
         ws = new WebSocket(wsUrl);
     } catch(e) {
         console.error("Could not create WebSocket connection to server", e);
