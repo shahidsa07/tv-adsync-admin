@@ -7,15 +7,15 @@ import type { TV, Playlist, PriorityStream } from '@/lib/definitions';
 import { Loader2, Tv, WifiOff } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
+import { setTvOnlineStatusAction } from '@/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
 interface TvState {
   tvId: string;
   name: string;
-  group: { id: string; name: string } | null;
+  group: { id: string; name: string, priorityStream: PriorityStream | null } | null;
   playlist: Playlist | null;
-  priorityStream: PriorityStream | null;
 }
 
 const STATE_POLL_INTERVAL = 10000; // 10 seconds
@@ -50,7 +50,7 @@ function TVPlayer() {
         if (prevState?.playlist?.id !== data.playlist?.id) {
           setCurrentAdIndex(0);
         }
-        return { ...data, priorityStream: data.group?.priorityStream };
+        return data;
       });
       setError(null);
     } catch (e: any) {
@@ -67,6 +67,7 @@ function TVPlayer() {
   // --- Ad Playback & Analytics ---
 
   const recordAdPlay = async (adId: string, duration: number) => {
+    if (!tvId) return;
     try {
       await fetch(`/api/analytics/record-play`, {
         method: 'POST',
@@ -101,13 +102,27 @@ function TVPlayer() {
 
   // --- Effects ---
 
-  // Initial fetch and setup polling
+  // Initial fetch, online status reporting, and setup polling
   useEffect(() => {
+    if (!tvId) return;
+
+    // Report online status immediately and on page unload
+    setTvOnlineStatusAction(tvId, true);
+    const handleBeforeUnload = () => {
+        // Note: This is best-effort and may not always succeed
+        setTvOnlineStatusAction(tvId, false);
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Fetch initial state and start polling
     fetchState();
     const stateRefreshInterval = setInterval(fetchState, STATE_POLL_INTERVAL);
     
     return () => {
       clearInterval(stateRefreshInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      // Report offline status when component unmounts
+      setTvOnlineStatusAction(tvId, false);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvId]);
@@ -130,7 +145,7 @@ function TVPlayer() {
 
   // Ad rotation timer
   useEffect(() => {
-    if (state?.priorityStream) return; // Don't rotate ads if priority stream is active
+    if (state?.group?.priorityStream) return; // Don't rotate ads if priority stream is active
 
     const currentAd = state?.playlist?.ads[currentAdIndex];
     const duration = currentAd?.type === 'image' ? (currentAd.duration ?? 15) * 1000 : undefined;
@@ -183,8 +198,8 @@ function TVPlayer() {
     );
   }
 
-  if (state.priorityStream) {
-    const { type, url } = state.priorityStream;
+  if (state.group.priorityStream) {
+    const { type, url } = state.group.priorityStream;
     return (
       <div className="fixed inset-0 bg-black">
         {type === 'youtube' && (

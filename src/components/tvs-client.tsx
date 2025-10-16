@@ -13,10 +13,7 @@ interface TvsClientProps {
   initialGroups: Group[];
 }
 
-type FilterType = "all" | "assigned" | "unassigned" | "online" | "offline";
-
 export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
-  const [filter, setFilter] = useState<FilterType>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [showAddTvDialog, setShowAddTvDialog] = useState(false);
 
@@ -25,27 +22,12 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
     
     return initialTvs
       .filter((tv) => {
-        switch (filter) {
-          case "assigned":
-            return !!tv.groupId;
-          case "unassigned":
-            return !tv.groupId;
-          case "online":
-            return tv.isOnline;
-          case "offline":
-            return !tv.isOnline;
-          case "all":
-          default:
-            return true;
-        }
-      })
-      .filter((tv) => {
         if (!lowercasedSearchTerm) return true;
         const nameMatch = tv.name.toLowerCase().includes(lowercasedSearchTerm);
         const locationMatch = tv.shopLocation?.toLowerCase().includes(lowercasedSearchTerm);
         return nameMatch || locationMatch;
       });
-  }, [initialTvs, filter, searchTerm]);
+  }, [initialTvs, searchTerm]);
 
   return (
     <div className="space-y-6">
@@ -67,54 +49,10 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
             </div>
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-                <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted p-1 w-full sm:w-auto">
-                    <Button
-                        variant={filter === "all" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setFilter("all")}
-                        className="flex-1 justify-center"
-                    >
-                        All
-                    </Button>
-                    <Button
-                        variant={filter === "assigned" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setFilter("assigned")}
-                        className="flex-1 justify-center"
-                    >
-                        Assigned
-                    </Button>
-                    <Button
-                        variant={filter === "unassigned" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setFilter("unassigned")}
-                        className="flex-1 justify-center"
-                    >
-                        Unassigned
-                    </Button>
-                    <Button
-                        variant={filter === "online" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setFilter("online")}
-                        className="flex-1 justify-center"
-                    >
-                        Online
-                    </Button>
-                    <Button
-                        variant={filter === "offline" ? "default" : "ghost"}
-                        size="sm"
-                        onClick={() => setFilter("offline")}
-                        className="flex-1 justify-center"
-                    >
-                        Offline
-                    </Button>
-                </div>
-                <Button variant="outline" onClick={() => setShowAddTvDialog(true)} className="w-full sm:w-auto">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Add TV
-                </Button>
-            </div>
+            <Button variant="outline" onClick={() => setShowAddTvDialog(true)} className="w-full sm:w-auto">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add TV
+            </Button>
         </div>
       </div>
 

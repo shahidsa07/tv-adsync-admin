@@ -128,10 +128,9 @@ export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean) {
     try {
         await data.setTvOnlineStatus(tvId, isOnline);
         
-        // Revalidate paths to update UI
         revalidatePath(`/dashboard`);
         revalidatePath(`/tvs`);
-        revalidatePath(`/groups`);
+        revalidatePath(`/groups/`);
 
         return { success: true, message: `TV status updated.` };
     } catch (error) {

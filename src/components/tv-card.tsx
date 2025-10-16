@@ -3,13 +3,15 @@
 import type { TV, Group } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Monitor, ArrowRight, Pencil, Loader2, Trash2, XCircle, Store } from 'lucide-react';
+import { Monitor, ArrowRight, Pencil, Loader2, Trash2, XCircle, Store, Wifi, WifiOff } from 'lucide-react';
 import { AssignGroupDialog } from './assign-group-dialog';
 import { useState, useTransition } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { deleteTvAction, removeFromGroupAction } from '@/lib/actions';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { EditTvDialog } from './edit-tv-dialog';
+import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 interface TvCardProps {
   tv: TV;
@@ -57,6 +59,10 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
             <CardTitle className="font-headline tracking-tight">
               {tv.name}
             </CardTitle>
+             <Badge variant={tv.isOnline ? 'default' : 'secondary'} className={cn(tv.isOnline && "bg-green-600 hover:bg-green-600")}>
+                {tv.isOnline ? <Wifi className="mr-2" /> : <WifiOff className="mr-2" />}
+                {tv.isOnline ? 'Online' : 'Offline'}
+            </Badge>
           </div>
           <CardDescription>{tv.tvId}</CardDescription>
         </CardHeader>
