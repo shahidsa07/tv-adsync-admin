@@ -10,10 +10,7 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Use a relative path for the WebSocket. The browser will automatically resolve
-    // this to ws://localhost:PORT/ws in development and wss://your-domain/ws in production.
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/ws`;
+    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL!;
     
     let ws: WebSocket;
 
