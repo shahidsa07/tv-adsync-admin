@@ -14,7 +14,6 @@ import { Label } from "./ui/label";
 import { updateGroupPlaylistAction } from "@/lib/actions";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
-import { useWebSocket } from "@/hooks/use-websocket";
 import { ScrollArea } from "./ui/scroll-area";
 
 interface GroupDetailsClientProps {
@@ -30,7 +29,6 @@ export function GroupDetailsClient({ initialGroup, allTvs, allPlaylists }: Group
     const [isPlaylistPending, startPlaylistTransition] = useTransition();
     const { toast } = useToast();
     
-    useWebSocket();
 
     const assignedTvs = allTvs.filter(tv => tv.groupId === group.id);
     const currentPlaylist = allPlaylists.find(p => p.id === group.playlistId);

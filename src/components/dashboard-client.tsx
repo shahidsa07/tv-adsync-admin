@@ -6,7 +6,6 @@ import { TvCard } from './tv-card';
 import { Button } from './ui/button';
 import { PlusCircle } from 'lucide-react';
 import { AddTvDialog } from './add-tv-dialog';
-import { useWebSocket } from '@/hooks/use-websocket';
 
 interface DashboardClientProps {
   initialTvs: TV[];
@@ -17,8 +16,6 @@ export function DashboardClient({ initialTvs, initialGroups }: DashboardClientPr
   const [tvs] = useState(initialTvs);
   const [groups] = useState(initialGroups);
   const [showAddTvDialog, setShowAddTvDialog] = useState(false);
-
-  useWebSocket();
 
   const unassignedTvs = tvs.filter(tv => !tv.groupId);
 

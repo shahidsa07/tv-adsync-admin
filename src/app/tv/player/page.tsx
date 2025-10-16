@@ -18,7 +18,7 @@ interface TvState {
   priorityStream: PriorityStream | null;
 }
 
-const WEBSOCKET_RECONNECT_INTERVAL = 5000; // 5 seconds
+const STATE_POLL_INTERVAL = 10000; // 10 seconds
 
 function TVPlayer() {
   const searchParams = useSearchParams();
@@ -28,7 +28,6 @@ function TVPlayer() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
   const adStartTimeRef = useRef<number | null>(null);
 
   // --- Data Fetching and State Management ---
@@ -38,7 +37,7 @@ function TVPlayer() {
       setIsLoading(false);
       return;
     }
-    console.log(`Fetching state for ${tvId}...`);
+    console.log(`Polling for state for ${tvId}...`);
     try {
       const response = await fetch(`/api/tv-state/${tvId}`);
       if (!response.ok) {
@@ -65,66 +64,6 @@ function TVPlayer() {
   };
 
 
-  // --- WebSocket Connection ---
-  useEffect(() => {
-    if (!tvId) return;
-
-    const wsUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL;
-    if (!wsUrl) {
-      console.error("NEXT_PUBLIC_WEBSOCKET_URL is not defined.");
-      setError("WebSocket URL is not configured.");
-      return;
-    }
-
-    let reconnectInterval: NodeJS.Timeout;
-
-    function connect() {
-      if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
-        return; // Already connected or connecting
-      }
-
-      console.log(`Connecting to WebSocket: ${wsUrl}`);
-      const newWs = new WebSocket(wsUrl);
-
-      newWs.onopen = () => {
-        console.log('WebSocket connection established.');
-        newWs.send(JSON.stringify({ type: 'register', payload: { tvId } }));
-      };
-
-      newWs.onmessage = (event) => {
-        const message = JSON.parse(event.data);
-        console.log('WebSocket message received:', message);
-        if (message.type === 'REFRESH_STATE') {
-          fetchState();
-        }
-      };
-
-      newWs.onclose = (event) => {
-        console.log('WebSocket connection closed.', event.code, event.reason);
-        wsRef.current = null;
-        reconnectInterval = setTimeout(connect, WEBSOCKET_RECONNECT_INTERVAL);
-      };
-
-      newWs.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        newWs.close(); // Triggers onclose and reconnection attempt
-      };
-
-      wsRef.current = newWs;
-    }
-
-    connect();
-
-    return () => {
-      clearTimeout(reconnectInterval);
-      if (wsRef.current) {
-        wsRef.current.close(1000, "TV Player component unmounting");
-      }
-    };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tvId]);
-  
-  
   // --- Ad Playback & Analytics ---
 
   const recordAdPlay = async (adId: string, duration: number) => {
@@ -165,7 +104,7 @@ function TVPlayer() {
   // Initial fetch and setup polling
   useEffect(() => {
     fetchState();
-    const stateRefreshInterval = setInterval(fetchState, 60000); // Poll every 60 seconds as a fallback
+    const stateRefreshInterval = setInterval(fetchState, STATE_POLL_INTERVAL);
     
     return () => {
       clearInterval(stateRefreshInterval);

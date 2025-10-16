@@ -3,16 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm:dev:next\" \"npm:dev:socket\"",
-    "dev:next": "next dev -p 3000",
-    "dev:socket": "tsx watch socket-server/index.ts",
+    "dev": "next dev -p 3000",
     "build": "next build",
-    "start": "concurrently \"npm:start:next\" \"npm:start:socket\"",
-    "start:next": "next start -p 8080",
-    "start:socket": "node socket-server/dist/index.js",
+    "start": "next start -p 8080",
     "lint": "next lint",
-    "typecheck": "tsc --noEmit",
-    "postinstall": "cd socket-server && npm install && npm run build"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",

@@ -110,9 +110,7 @@ export function ManageGroupTvsDialog({ open, onOpenChange, group, allTvs }: Mana
                                 )}
                             </div>
                         </div>
-                        <Badge variant={tv.isOnline ? 'default' : 'secondary'} className={tv.isOnline ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}>
-                          {tv.isOnline ? 'Online' : 'Offline'}
-                        </Badge>
+                        {/* We don't have real-time status in this component anymore */}
                     </div>
             )) : (
               <p className="text-center text-muted-foreground pt-4">No available TVs match your search.</p>

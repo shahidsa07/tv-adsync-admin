@@ -2,7 +2,6 @@
 
 import type { TV, Group } from '@/lib/definitions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Monitor, ArrowRight, Pencil, Loader2, Trash2, XCircle, Store } from 'lucide-react';
 import { AssignGroupDialog } from './assign-group-dialog';
@@ -25,7 +24,6 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
   const [isRemoving, startRemoveTransition] = useTransition();
   const { toast } = useToast();
 
-  const isOnline = tv.isOnline;
   const group = groups.find(g => g.id === tv.groupId);
 
   const handleDelete = () => {
@@ -59,9 +57,6 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
             <CardTitle className="font-headline tracking-tight">
               {tv.name}
             </CardTitle>
-            <Badge variant={isOnline ? 'default' : 'secondary'} className={isOnline ? 'bg-green-500/20 text-green-700 border-green-500/30' : ''}>
-              {isOnline ? 'Online' : 'Offline'}
-            </Badge>
           </div>
           <CardDescription>{tv.tvId}</CardDescription>
         </CardHeader>
@@ -86,7 +81,7 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
             ) : (
                 <>
                     {!group && (
-                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)} disabled={!isOnline}>
+                        <Button className="w-full bg-accent hover:bg-accent/90 text-accent-foreground" onClick={() => setIsAssigning(true)}>
                             Assign Group
                             <ArrowRight className="ml-2 h-4 w-4" />
                         </Button>
@@ -124,7 +119,7 @@ export function TvCard({ tv, groups, showRemoveFromGroup = false }: TvCardProps)
             )}
         </CardFooter>
       </Card>
-      {isOnline && <AssignGroupDialog open={isAssigning} onOpenChange={setIsAssigning} tv={tv} groups={groups} />}
+      <AssignGroupDialog open={isAssigning} onOpenChange={setIsAssigning} tv={tv} groups={groups} />
       <EditTvDialog open={isEditing} onOpenChange={setIsEditing} tv={tv} />
     </>
   );
