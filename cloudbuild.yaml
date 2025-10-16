@@ -1,14 +1,30 @@
 steps:
-- name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-  entrypoint: 'gcloud'
-  args:
-    - 'run'
-    - 'deploy'
-    - 'nextads-socket-server' # A distinct name for the WebSocket service
-    - '--source'
-    - './socket-server' # Deploy only the socket-server directory
-    - '--region'
-    - 'asia-south1'
-    - '--allow-unauthenticated'
-    - '--port'
-    - '8080'
+  # Step 1: Deploy the WebSocket server to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'Deploy WebSocket Server'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'nextads-socket-server' # A distinct name for the WebSocket service
+      - '--source'
+      - './socket-server' # Deploy only the socket-server directory
+      - '--region'
+      - 'asia-south1'
+      - '--port'
+      - '8080'
+
+  # Step 2: Set the IAM policy to allow public (unauthenticated) access
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'services'
+      - 'add-iam-policy-binding'
+      - 'nextads-socket-server'
+      - '--region'
+      - 'asia-south1'
+      - '--member=allUsers'
+      - '--role=roles/run.invoker'
+    # This step runs after the deployment is successful
+    waitFor: ['Deploy WebSocket Server']
