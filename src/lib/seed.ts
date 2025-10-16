@@ -1,13 +1,9 @@
 'server-only';
-import { db } from './firebase';
+import { getDb } from './firebase';
 
 export const seedInitialData = async () => {
-    if (!db) {
-        console.warn("Skipping seed: Firestore is not initialized.");
-        return;
-    }
-    
     try {
+        const db = getDb();
         console.log('Checking for existing data...');
         const adsSnapshot = await db.collection('ads').limit(1).get();
 

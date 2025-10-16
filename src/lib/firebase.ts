@@ -1,48 +1,59 @@
-import {getApps, initializeApp, cert, App} from 'firebase-admin/app';
-import {getFirestore, Firestore} from 'firebase-admin/firestore';
+import { getApps, initializeApp, cert, App } from 'firebase-admin/app';
+import { getFirestore, Firestore } from 'firebase-admin/firestore';
 import { config } from 'dotenv';
 
-// Load environment variables from .env file
-config();
+config(); // Load environment variables from .env file
 
-// This is the recommended pattern for initializing firebase-admin in a serverless environment.
-// It ensures that we don't try to initialize the app more than once.
+let app: App | undefined;
+let db: Firestore | undefined;
 
-let app: App;
-let db: Firestore;
+function initializeFirebaseAdmin() {
+  if (app) {
+    return; // Already initialized
+  }
 
-const projectId = process.env.FIREBASE_PROJECT_ID;
-const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-// The private key must be parsed correctly to handle newline characters.
-const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const projectId = process.env.FIREBASE_PROJECT_ID;
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  // The private key must be parsed correctly to handle newline characters.
+  const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
-if (projectId && clientEmail && privateKey) {
-  if (getApps().length === 0) {
-    try {
-      app = initializeApp({
-        credential: cert({
-          projectId,
-          clientEmail,
-          privateKey,
-        }),
-      });
-      db = getFirestore(app);
-      console.log('Firebase Admin SDK initialized successfully.');
-    } catch (error: any) {
-      console.error('Firebase Admin initialization error:', error.message);
-      // @ts-ignore
-      db = undefined;
+  if (projectId && clientEmail && privateKey) {
+    if (getApps().length === 0) {
+      try {
+        app = initializeApp({
+          credential: cert({
+            projectId,
+            clientEmail,
+            privateKey,
+          }),
+        });
+        console.log('Firebase Admin SDK initialized successfully.');
+      } catch (error: any) {
+        console.error('Firebase Admin initialization error:', error.message);
+      }
+    } else {
+      app = getApps()[0];
     }
   } else {
-    app = getApps()[0];
-    db = getFirestore(app);
+    console.warn(
+      'Firebase credentials are not set in .env file. Database operations will not be available.'
+    );
   }
-} else {
-  console.warn(
-    'Firebase credentials are not set in .env file. Database operations will not be available.'
-  );
-  // @ts-ignore
-  db = undefined;
 }
 
-export {app, db};
+function getDb(): Firestore {
+  if (!app) {
+    initializeFirebaseAdmin();
+  }
+  if (!db) {
+    if (app) {
+      db = getFirestore(app);
+    } else {
+      // This will throw an error in functions that try to use it without proper setup.
+      throw new Error("Firestore is not initialized. Check your Firebase credentials.");
+    }
+  }
+  return db;
+}
+
+export { getDb };
