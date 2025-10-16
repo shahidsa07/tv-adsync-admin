@@ -20,7 +20,7 @@ steps:
       - '--image'
       - 'gcr.io/$PROJECT_ID/nextads-socket-server:$COMMIT_SHA'
       - '--region'
-      - 'asia-south1'
+      - 'us-central1'
       - '--port'
       - '8080'
     waitFor: ['Push WebSocket Server']
@@ -34,7 +34,7 @@ steps:
       - 'add-iam-policy-binding'
       - 'nextads-socket-server'
       - '--region'
-      - 'asia-south1'
+      - 'us-central1'
       - '--member=allUsers'
       - '--role=roles/run.invoker'
     waitFor: ['Deploy WebSocket Server']
