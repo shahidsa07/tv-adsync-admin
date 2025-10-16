@@ -109,19 +109,21 @@ wss.on('connection', (ws) => {
                 if (tvId) {
                     clientType = 'tv';
                     clientId = tvId;
-                    if (tvConnections.has(clientId)) {
-                        console.log(`[Socket Server] Terminating old connection for ${clientId}`);
-                        tvConnections.get(clientId)?.terminate();
+                    if (clientId) {
+                        if (tvConnections.has(clientId)) {
+                            console.log(`[Socket Server] Terminating old connection for ${clientId}`);
+                            tvConnections.get(clientId)?.terminate();
+                        }
+                        tvConnections.set(clientId, ws);
+                        console.log(`[Socket Server] TV registered: ${clientId}`);
+                        ws.send(JSON.stringify({ type: 'registered', tvId: clientId }));
+                        
+                        // Notify main app that TV is online
+                        await fs.promises.writeFile(path.join(NOTIFICATION_DIR, `status-${clientId}-on.json`), JSON.stringify({
+                          type: 'status-change',
+                          payload: { tvId: clientId, isOnline: true }
+                        }));
                     }
-                    tvConnections.set(clientId, ws);
-                    console.log(`[Socket Server] TV registered: ${clientId}`);
-                    ws.send(JSON.stringify({ type: 'registered', tvId: clientId }));
-                    
-                    // Notify main app that TV is online
-                    await fs.promises.writeFile(path.join(NOTIFICATION_DIR, `status-${clientId}-on.json`), JSON.stringify({
-                      type: 'status-change',
-                      payload: { tvId: clientId, isOnline: true }
-                    }));
                 }
             } else {
                 console.log('[Socket Server] Received unknown message type:', data.type);
