@@ -54,15 +54,15 @@ export const seedInitialData = async () => {
 
         // Seed TVs
         const tvsToCreate = [
-            { tvId: 'tv-lobby-main-001', name: 'Lobby Main TV', groupId: 'group-lobby' },
-            { tvId: 'tv-lobby-side-002', name: 'Lobby Side TV', groupId: 'group-lobby' },
-            { tvId: 'tv-cafe-menu-001', name: 'Cafe Menu Board', groupId: 'group-cafe' },
-            { tvId: 'tv-conf-room-A-001', name: 'Conference Room A', groupId: null },
-            { tvId: 'tv-break-room-001', name: 'Break Room TV', groupId: null },
+            { tvId: 'tv-lobby-main-001', name: 'Lobby Main TV', groupId: 'group-lobby', isOnline: false },
+            { tvId: 'tv-lobby-side-002', name: 'Lobby Side TV', groupId: 'group-lobby', isOnline: false },
+            { tvId: 'tv-cafe-menu-001', name: 'Cafe Menu Board', groupId: 'group-cafe', isOnline: false },
+            { tvId: 'tv-conf-room-A-001', name: 'Conference Room A', groupId: null, isOnline: false },
+            { tvId: 'tv-break-room-001', name: 'Break Room TV', groupId: null, isOnline: false },
         ];
         tvsToCreate.forEach(tv => {
             const tvRef = db.collection('tvs').doc(tv.tvId);
-            batch.set(tvRef, { ...tv, socketId: `socket-fake-${Math.random()}` });
+            batch.set(tvRef, tv);
         });
 
         await batch.commit();

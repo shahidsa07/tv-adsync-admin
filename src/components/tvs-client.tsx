@@ -34,9 +34,9 @@ export function TvsClient({ initialTvs, initialGroups }: TvsClientProps) {
           case "unassigned":
             return !tv.groupId;
           case "online":
-            return !!tv.socketId;
+            return tv.isOnline;
           case "offline":
-            return !tv.socketId;
+            return !tv.isOnline;
           case "all":
           default:
             return true;
