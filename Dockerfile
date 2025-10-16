@@ -1,24 +1,24 @@
-# Use official Node image
+# Use an official Node.js runtime as a parent image
 FROM node:18-alpine
 
-# Set working directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy package files
+# Copy package.json and package-lock.json (or npm-shrinkwrap.json)
 COPY package*.json ./
 
-# Install dependencies
-RUN npm ci --omit=dev
+# Install app dependencies
+RUN npm install
 
-# Copy all project files
+# Copy the rest of your app's source code from your host to your image filesystem.
 COPY . .
 
-# Build your Next.js app and server
+# Build your Next.js application
 RUN npm run build
 
-# Expose the port (Cloud Run uses $PORT, defaults to 8080)
+# Make your app's port available to the outside world
 ENV PORT=8080
 EXPOSE 8080
 
-# Start your custom Next.js + WebSocket server
-CMD ["node", "dist/server.js"]
+# The command to run your app
+CMD ["npm", "start"]
