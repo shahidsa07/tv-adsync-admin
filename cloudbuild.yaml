@@ -9,7 +9,7 @@ steps:
     id: 'Push WebSocket Server'
     args: ['push', 'gcr.io/$PROJECT_ID/nextads-socket-server:$COMMIT_SHA']
 
-  # Step 3: Deploy the new image to Cloud Run
+  # Step 3: Deploy the new image to Cloud Run as a private service
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     id: 'Deploy WebSocket Server'
     entrypoint: 'gcloud'
@@ -24,17 +24,3 @@ steps:
       - '--port'
       - '8080'
     waitFor: ['Push WebSocket Server']
-
-  # Step 4: Set the IAM policy to allow public (unauthenticated) access
-  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
-    args:
-      - 'run'
-      - 'services'
-      - 'add-iam-policy-binding'
-      - 'nextads-socket-server'
-      - '--region'
-      - 'us-central1'
-      - '--member=allUsers'
-      - '--role=roles/run.invoker'
-    waitFor: ['Deploy WebSocket Server']
