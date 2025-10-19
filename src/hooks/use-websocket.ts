@@ -16,7 +16,7 @@ export function useWebSocket() {
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsHost = isLocalDev
       ? `${wsProtocol}//${window.location.hostname}:9002`
-      : `${wsProtocol}//studio-96736714317.us-central1.run.app`;
+      : `${wsProtocol}//${window.location.host}`;
     
     let ws: WebSocket;
 
