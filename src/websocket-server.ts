@@ -9,34 +9,38 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { getTvById, setTvOnlineStatus, getTvsByGroupId } from './lib/data';
 import chokidar from 'chokidar';
+import type { Server } from 'http';
+import type { Socket } from 'net';
 
-const PORT = 8080;
+
+// App Hosting will provide the PORT environment variable.
+const PORT = parseInt(process.env.PORT || '8080', 10);
+const HOST = '0.0.0.0'; // Listen on all available network interfaces
 
 const isProduction = process.env.NODE_ENV === 'production';
 let server: import('http').Server | import('https').Server;
 
 if (isProduction) {
-    console.log('Starting WebSocket server in PRODUCTION mode (wss://)');
-    // In production, create a secure HTTPS server
-    const certPath = path.join(process.cwd(), 'cert.pem');
-    const keyPath = path.join(process.cwd(), 'key.pem');
-
-    if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
-        console.error('SSL certificate or key not found for production. Ensure cert.pem and key.pem are in the root directory.');
-        process.exit(1);
-    }
-
-    server = createHttpsServer({
-        cert: fs.readFileSync(certPath),
-        key: fs.readFileSync(keyPath),
-    });
+    console.log('Starting WebSocket server in PRODUCTION mode (ws://)');
+    // In production, we run behind a proxy that handles TLS, so we use a standard HTTP server.
+    // The public-facing protocol will be wss://.
+    server = createHttpServer();
 } else {
     console.log('Starting WebSocket server in DEVELOPMENT mode (ws://)');
     // In development, create a standard HTTP server
     server = createHttpServer();
 }
 
-const wss = new WebSocketServer({ server });
+const wss = new WebSocketServer({ noServer: true });
+
+// Handle the HTTP upgrade request to switch to WebSocket protocol
+server.on('upgrade', (request, socket, head) => {
+    // Here we can add authentication or validation logic if needed
+    wss.handleUpgrade(request, socket as Socket, head, (ws) => {
+        wss.emit('connection', ws, request);
+    });
+});
+
 
 // Separate maps for different client types
 const tvConnections = new Map<string, WebSocket>();
@@ -188,14 +192,8 @@ wss.on('connection', (ws) => {
     });
 });
 
-server.listen(PORT, () => {
-    const protocol = isProduction ? 'wss' : 'ws';
-    console.log(`WebSocket server started on ${protocol}://<host>:${PORT}`);
-    if (!isProduction) {
-        console.log('Listening on all network interfaces. Use your computer\'s local IP for client connections.');
-    } else {
-        console.log('Running in production mode.');
-    }
+server.listen(PORT, HOST, () => {
+    console.log(`Main server (handling HTTP and WS) started on http://${HOST}:${PORT}`);
 });
 
 setupNotificationWatcher();
