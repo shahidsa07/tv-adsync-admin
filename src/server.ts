@@ -13,7 +13,7 @@ import chokidar from 'chokidar';
 import type { Socket } from 'net';
 
 const dev = process.env.NODE_ENV !== 'production';
-const hostname = '0.0.0.0';
+const hostname = '0.0.0.0'; // Cloud Run requires 0.0.0.0
 const port = parseInt(process.env.PORT || '9002', 10);
 
 // when using middleware `hostname` and `port` must be provided below
@@ -44,6 +44,7 @@ app.prepare().then(() => {
 
       if (!req.url) throw new Error('No URL in request');
       const parsedUrl = parse(req.url, true);
+      // Let Next.js handle all other HTTP requests
       await handle(req, res, parsedUrl);
     } catch (err) {
       console.error('Error handling request:', err);
@@ -55,8 +56,10 @@ app.prepare().then(() => {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (request, socket, head) => {
+    console.log('Upgrade request received', request.headers);
     // This function is called whenever a client tries to upgrade the connection to a WebSocket.
     wss.handleUpgrade(request, socket as Socket, head, (ws) => {
+      console.log('Upgrade success, emitting connection');
       wss.emit('connection', ws, request);
     });
   });
