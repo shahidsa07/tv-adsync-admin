@@ -10,11 +10,10 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Determine the WebSocket protocol based on the window's protocol
+    // In production, the WebSocket server will be exposed on the same host and port as the web server.
+    // The browser will handle the upgrade from HTTP to WSS automatically.
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    
-    // Use the same hostname as the current window, but with port 8080
-    const wsHost = `${wsProtocol}//${window.location.hostname}:8080`;
+    const wsHost = `${wsProtocol}//${window.location.host}`;
     
     let ws: WebSocket;
 
