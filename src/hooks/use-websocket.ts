@@ -14,7 +14,9 @@ export function useWebSocket() {
     // For local development, specifically target the port our server is running on (9002)
     const isLocalDev = process.env.NODE_ENV === 'development';
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = isLocalDev ? `${wsProtocol}//${window.location.hostname}:9002` : `${wsProtocol}//${window.location.host}`;
+    const wsHost = isLocalDev
+      ? `${wsProtocol}//${window.location.hostname}:9002`
+      : `${wsProtocol}//studio-96736714317.us-central1.run.app`;
     
     let ws: WebSocket;
 
