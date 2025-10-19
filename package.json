@@ -12,7 +12,7 @@
     "start:next": "next start -p 8080",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
-    "postinstall": "npm run build"
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
