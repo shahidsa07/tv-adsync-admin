@@ -10,9 +10,11 @@ export function useWebSocket() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    // Use the current host and upgrade the protocol to ws/wss
+    // Use the current host and upgrade the protocol to ws/wss for production
+    // For local development, specifically target the port our server is running on (9002)
+    const isLocalDev = process.env.NODE_ENV === 'development';
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsHost = `${wsProtocol}//${window.location.host}`;
+    const wsHost = isLocalDev ? `${wsProtocol}//${window.location.hostname}:9002` : `${wsProtocol}//${window.location.host}`;
     
     let ws: WebSocket;
 
