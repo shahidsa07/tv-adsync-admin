@@ -147,22 +147,23 @@ app.prepare().then(() => {
           if (tvId) {
             clientType = 'tv';
             clientId = tvId;
-
-            if (tvConnections.has(clientId)) {
-              console.log(`Terminating old connection for ${clientId}`);
-              tvConnections.get(clientId)?.terminate();
+            if (clientId) {
+              if (tvConnections.has(clientId)) {
+                console.log(`Terminating old connection for ${clientId}`);
+                tvConnections.get(clientId)?.terminate();
+              }
+  
+              tvConnections.set(clientId, ws);
+              console.log(`TV connection opened: ${clientId}`);
+  
+              const tvDoc = await getTvById(clientId);
+              if (tvDoc) {
+                await handleTvConnection(clientId, true, ws);
+              } else {
+                console.log(`TV is not registered yet. Connection is pending registration for: ${clientId}`);
+              }
+              ws.send(JSON.stringify({ type: 'registered', tvId: clientId }));
             }
-
-            tvConnections.set(clientId, ws);
-            console.log(`TV connection opened: ${clientId}`);
-
-            const tvDoc = await getTvById(clientId);
-            if (tvDoc) {
-              await handleTvConnection(clientId, true, ws);
-            } else {
-              console.log(`TV is not registered yet. Connection is pending registration for: ${clientId}`);
-            }
-            ws.send(JSON.stringify({ type: 'registered', tvId: clientId }));
           }
         } else {
           console.log('Received unknown message type:', data.type);
