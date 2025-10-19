@@ -1,5 +1,5 @@
 
-import { createServer } from 'http';
+import { createServer, IncomingMessage, ServerResponse } from 'http';
 import next from 'next';
 import { parse } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -20,9 +20,28 @@ const port = parseInt(process.env.PORT || '9002', 10);
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
+const applyCorsHeaders = (req: IncomingMessage, res: ServerResponse) => {
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+    // Handle pre-flight OPTIONS requests
+    if (req.method === 'OPTIONS') {
+        res.writeHead(204);
+        res.end();
+        return true; // Request handled
+    }
+    return false; // Request not handled, continue
+}
+
 app.prepare().then(() => {
   const server = createServer(async (req, res) => {
     try {
+      // Apply CORS headers for all requests, and handle OPTIONS pre-flight
+      if (applyCorsHeaders(req, res)) {
+        return; // Stop processing if it was an OPTIONS request
+      }
+
       if (!req.url) throw new Error('No URL in request');
       const parsedUrl = parse(req.url, true);
       await handle(req, res, parsedUrl);
