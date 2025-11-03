@@ -2,11 +2,11 @@
 import { createServer } from 'http';
 import next from 'next';
 import { WebSocketServer, WebSocket } from 'ws';
-import { setTvOnlineStatusAction } from './src/lib/actions';
+import { setTvOnlineStatusAction } from '@/lib/actions';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0'; // Listen on all available interfaces
-const port = parseInt(process.env.PORT || (dev ? '3000' : '8080'), 10);
+const port = parseInt(process.env.PORT || '8080', 10);
 
 const app = next({ dev });
 const handle = app.getRequestHandler();
