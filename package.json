@@ -5,10 +5,13 @@
   "scripts": {
     "dev": "ts-node -r tsconfig-paths/register src/server.ts",
     "build": "next build && tsc --project tsconfig.server.json",
-    "start": "node -r tsconfig-paths/register dist/server.js",
+    "start": "node dist/server.js",
     "lint": "next lint",
     "typecheck": "tsc --noEmit",
     "postinstall": "patch-package"
+  },
+  "_moduleAliases": {
+    "@": "dist/src"
   },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
@@ -44,6 +47,7 @@
     "genkit": "^1.14.1",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^0.475.0",
+    "module-alias": "^2.2.3",
     "next": "15.3.3",
     "patch-package": "^8.0.0",
     "qrcode": "^1.5.3",
@@ -57,6 +61,7 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/module-alias": "^2.0.4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18",

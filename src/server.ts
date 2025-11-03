@@ -1,8 +1,9 @@
-
+import 'module-alias/register';
 import { createServer } from 'http';
 import next from 'next';
 import { WebSocketServer, WebSocket } from 'ws';
 import { setTvOnlineStatusAction } from '@/lib/actions';
+import { URL } from 'url';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0'; // Listen on all available interfaces
@@ -17,7 +18,15 @@ const tvConnections = new Map<string, WebSocket>();
 app.prepare().then(() => {
   const server = createServer((req, res) => handle(req, res));
 
-  const wss = new WebSocketServer({ server });
+  const wss = new WebSocketServer({ noServer: true });
+
+  server.on('upgrade', (request, socket, head) => {
+    console.log('Upgrade request received for:', request.url);
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      console.log('WebSocket upgrade successful, emitting connection.');
+      wss.emit('connection', ws, request);
+    });
+  });
 
   wss.on('connection', (ws, req) => {
     // Extract TV ID from the connection URL, e.g., /?tvId=tv-lobby-main-001
