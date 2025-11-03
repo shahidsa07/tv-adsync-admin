@@ -4,8 +4,9 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "outDir": "dist",
+    "rootDir": "src",
     "noEmit": false,
     "target": "es2020"
   },
-  "include": ["src/server.ts"]
+  "include": ["src/**/*.ts"]
 }
