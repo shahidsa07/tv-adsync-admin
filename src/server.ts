@@ -21,11 +21,19 @@ app.prepare().then(() => {
   const wss = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (request, socket, head) => {
-    console.log('Upgrade request received for:', request.url);
-    wss.handleUpgrade(request, socket, head, (ws) => {
-      console.log('WebSocket upgrade successful, emitting connection.');
-      wss.emit('connection', ws, request);
-    });
+    if (request.url) {
+        const url = new URL(request.url, `http://${request.headers.host}`);
+        const tvId = url.searchParams.get('tvId');
+        if (tvId) {
+            wss.handleUpgrade(request, socket, head, (ws) => {
+                wss.emit('connection', ws, request);
+            });
+        } else {
+            // If it's not a TV connection, you might want to handle it differently
+            // or just destroy the socket if you only expect TV connections.
+            socket.destroy();
+        }
+    }
   });
 
   wss.on('connection', (ws, req) => {
