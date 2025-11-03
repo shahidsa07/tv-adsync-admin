@@ -1,7 +1,8 @@
+
 import { createServer } from 'http';
 import next from 'next';
 import { WebSocketServer, WebSocket } from 'ws';
-import { setTvOnlineStatusAction } from '@/lib/actions';
+import { setTvOnlineStatusAction } from './src/lib/actions';
 
 const dev = process.env.NODE_ENV !== 'production';
 const hostname = '0.0.0.0'; // Listen on all available interfaces
