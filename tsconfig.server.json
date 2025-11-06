@@ -5,8 +5,9 @@
     "moduleResolution": "node",
     "outDir": "dist",
     "noEmit": false,
-    "target": "es2020"
+    "target": "es2020",
+    "lib": ["es2020", "dom"]
   },
-  "include": ["src/**/*.ts"],
+  "include": ["src/websocket-server.ts", "src/lib/**/*.ts", "src/ai/**/*.ts"],
   "exclude": ["node_modules", ".next"]
 }
