@@ -22,22 +22,26 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
         req.on('end', () => {
             try {
                 const { tvId } = JSON.parse(body);
-                if (tvId && tvConnections.has(tvId)) {
-                    const ws = tvConnections.get(tvId);
-                    if (ws && ws.readyState === WebSocket.OPEN) {
-                        ws.send(JSON.stringify({ action: 'refresh' }));
-                        console.log(`[HTTP Notify] Sent refresh to ${tvId}`);
-                        res.writeHead(200, { 'Content-Type': 'application/json' });
-                        res.end(JSON.stringify({ success: true, message: 'Notification sent.' }));
-                    } else {
-                         res.writeHead(400, { 'Content-Type': 'application/json' });
-                         res.end(JSON.stringify({ success: false, message: 'TV not connected or connection not open.' }));
-                    }
+                if (!tvId) {
+                    res.writeHead(400, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: false, message: 'Invalid payload: tvId is missing.' }));
+                    return;
+                }
+                
+                const ws = tvConnections.get(tvId);
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ action: 'refresh' }));
+                    console.log(`[HTTP Notify] Sent refresh to ${tvId}`);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, message: 'Notification sent.' }));
                 } else {
-                    res.writeHead(404, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ success: false, message: 'TV not found.' }));
+                    // This is not an error. The TV is just offline.
+                    console.log(`[HTTP Notify] TV ${tvId} is offline. No notification sent.`);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ success: true, message: 'TV is offline, no notification sent.' }));
                 }
             } catch (error) {
+                console.error('[HTTP Notify] Error processing notification:', error);
                 res.writeHead(400, { 'Content-Type': 'application/json' });
                 res.end(JSON.stringify({ success: false, message: 'Invalid JSON payload.' }));
             }
@@ -77,5 +81,6 @@ wss.on('connection', (ws, req) => {
 });
 
 server.listen(port, () => {
-  console.log(`> WebSocket Server ready on port ${port}`);
+  console.log(`> WebSocket Server ready and listening on port ${port}`);
+  console.log(`> Clients should connect to: ws://<your-server-ip>:${port}`);
 });
