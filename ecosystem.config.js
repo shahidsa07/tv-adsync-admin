@@ -5,7 +5,7 @@ module.exports = {
       script: 'npm',
       args: 'start',
       // Set the current working directory to the project root
-      cwd: '.',
+      cwd: '/home/ubuntu/tv-adsync-admin',
       // Ensure the app uses the environment variables from the user's shell
       env: {
         ...process.env,
@@ -17,7 +17,7 @@ module.exports = {
       name: 'signagewise-ws',
       script: 'dist/websocket-server.js',
       // Set the current working directory to the project root
-      cwd: '.',
+      cwd: '/home/ubuntu/tv-adsync-admin',
       // Ensure the app uses the environment variables from the user's shell
       env: {
         ...process.env,
