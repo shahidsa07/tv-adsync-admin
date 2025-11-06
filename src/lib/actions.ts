@@ -159,6 +159,7 @@ export async function setTvOnlineStatusAction(tvId: string, isOnline: boolean) {
 export async function deleteTvAction(tvId: string) {
     try {
         await data.deleteTv(tvId);
+        await notifyTv(tvId); // Notify the client it has been deleted
 
         revalidatePath('/', 'layout');
         return { success: true, message: 'TV deleted successfully.' };
