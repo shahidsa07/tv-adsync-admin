@@ -7,7 +7,6 @@ import type { TV, Playlist, PriorityStream } from '@/lib/definitions';
 import { Loader2, Tv, WifiOff } from 'lucide-react';
 import QRCode from 'qrcode';
 import { Button } from '@/components/ui/button';
-import { setTvOnlineStatusAction } from '@/lib/actions';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,6 +28,9 @@ function TVPlayer() {
   const [currentAdIndex, setCurrentAdIndex] = useState(0);
   const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
   const adStartTimeRef = useRef<number | null>(null);
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
 
   // --- Data Fetching and State Management ---
   const fetchState = async () => {
@@ -63,6 +65,51 @@ function TVPlayer() {
     }
   };
 
+  const connectWebSocket = () => {
+    if (!tvId || wsRef.current) return;
+
+    // Dynamically construct the WebSocket URL
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const wsPort = '8081'; // As defined in ecosystem.config.js
+    const wsUrl = `${protocol}//${host}:${wsPort}/?tvId=${tvId}`;
+    
+    console.log(`Connecting to WebSocket at ${wsUrl}`);
+    
+    const ws = new WebSocket(wsUrl);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      console.log(`[WebSocket] Connected for TV: ${tvId}`);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+    };
+    
+    ws.onmessage = (event) => {
+        const message = JSON.parse(event.data);
+        console.log('[WebSocket] Received message:', message);
+        if (message.action === 'refresh') {
+            console.log('[WebSocket] Refresh command received, fetching latest state...');
+            fetchState();
+        }
+    };
+
+    ws.onclose = () => {
+      console.log(`[WebSocket] Disconnected for TV: ${tvId}. Attempting to reconnect...`);
+      wsRef.current = null;
+      // Simple exponential backoff reconnect
+      if (!reconnectTimeoutRef.current) {
+          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.error('[WebSocket] Error:', err);
+      ws.close();
+    };
+  };
 
   // --- Ad Playback & Analytics ---
 
@@ -102,27 +149,23 @@ function TVPlayer() {
 
   // --- Effects ---
 
-  // Initial fetch, online status reporting, and setup polling
+  // Initial fetch, and setup polling + websockets
   useEffect(() => {
     if (!tvId) return;
 
-    // Report online status immediately and on page unload
-    setTvOnlineStatusAction(tvId, true);
-    const handleBeforeUnload = () => {
-        // Note: This is best-effort and may not always succeed
-        setTvOnlineStatusAction(tvId, false);
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-
-    // Fetch initial state and start polling
     fetchState();
+    connectWebSocket(); // Establish WebSocket connection
+
     const stateRefreshInterval = setInterval(fetchState, STATE_POLL_INTERVAL);
     
     return () => {
       clearInterval(stateRefreshInterval);
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      // Report offline status when component unmounts
-      setTvOnlineStatusAction(tvId, false);
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+      }
+      if (wsRef.current) {
+        wsRef.current.close();
+      }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tvId]);
