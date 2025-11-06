@@ -29,8 +29,6 @@ app.prepare().then(() => {
                 wss.emit('connection', ws, request);
             });
         } else {
-            // If it's not a TV connection, you might want to handle it differently
-            // or just destroy the socket if you only expect TV connections.
             socket.destroy();
         }
     }
