@@ -10,6 +10,17 @@ config();
 
 const port = parseInt(process.env.PORT || '8081', 10);
 const tvConnections = new Map<string, WebSocket>();
+const adminConnections = new Set<WebSocket>();
+
+// Function to broadcast a message to all connected admin clients
+function broadcastToAdmins(message: object) {
+    const messageString = JSON.stringify(message);
+    adminConnections.forEach(ws => {
+        if (ws.readyState === WebSocket.OPEN) {
+            ws.send(messageString);
+        }
+    });
+}
 
 // Create a simple HTTP server to handle both WebSocket upgrades and internal notification requests.
 const server = createServer(async (req: IncomingMessage, res: ServerResponse) => {
@@ -35,7 +46,6 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: true, message: 'Notification sent.' }));
                 } else {
-                    // This is not an error. The TV is just offline.
                     console.log(`[HTTP Notify] TV ${tvId} is offline. No notification sent.`);
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: true, message: 'TV is offline, no notification sent.' }));
@@ -47,7 +57,6 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
             }
         });
     } else {
-      // This server doesn't handle other HTTP requests, it's just for the WebSocket upgrade.
       res.writeHead(426, { 'Content-Type': 'text/plain' });
       res.end('Upgrade Required');
     }
@@ -58,29 +67,47 @@ const wss = new WebSocketServer({ server });
 wss.on('connection', (ws, req) => {
   const url = new URL(req.url || '', `http://${req.headers.host}`);
   const tvId = url.searchParams.get('tvId');
+  const isAdmin = url.searchParams.get('clientType') === 'admin';
 
-  if (tvId) {
+  if (isAdmin) {
+      console.log(`[WebSocket] Admin client connected.`);
+      adminConnections.add(ws);
+      ws.on('close', () => {
+          console.log(`[WebSocket] Admin client disconnected.`);
+          adminConnections.delete(ws);
+      });
+      ws.on('error', (error) => {
+          console.error(`[WebSocket] Error for admin client:`, error);
+          adminConnections.delete(ws);
+      });
+
+  } else if (tvId) {
     console.log(`[WebSocket] TV connected: ${tvId}`);
     tvConnections.set(tvId, ws);
 
-    setTvOnlineStatusAction(tvId, true).catch(console.error);
+    setTvOnlineStatusAction(tvId, true).then(() => {
+        broadcastToAdmins({ type: 'tv-status-changed', payload: { tvId, isOnline: true } });
+    }).catch(console.error);
 
     ws.on('close', () => {
       console.log(`[WebSocket] TV disconnected: ${tvId}`);
       tvConnections.delete(tvId);
-      setTvOnlineStatusAction(tvId, false).catch(console.error);
+      setTvOnlineStatusAction(tvId, false).then(() => {
+          broadcastToAdmins({ type: 'tv-status-changed', payload: { tvId, isOnline: false } });
+      }).catch(console.error);
     });
 
     ws.on('error', (error) => {
       console.error(`[WebSocket] Error for TV ${tvId}:`, error);
     });
   } else {
-    console.log('[WebSocket] Connection rejected: No tvId provided.');
+    console.log('[WebSocket] Connection rejected: No tvId or admin clientType provided.');
     ws.close();
   }
 });
 
 server.listen(port, () => {
   console.log(`> WebSocket Server ready and listening on port ${port}`);
-  console.log(`> Clients should connect to: ws://<your-server-ip>:${port}`);
+  console.log(`> TV Clients connect to: ws://<your-server-ip>:${port}/?tvId=<ID>`);
+  console.log(`> Admin Clients connect to: ws://<your-server-ip>:${port}/?clientType=admin`);
 });

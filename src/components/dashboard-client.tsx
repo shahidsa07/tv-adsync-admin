@@ -6,6 +6,7 @@ import { Button } from './ui/button';
 import { PlusCircle } from 'lucide-react';
 import { AddTvDialog } from './add-tv-dialog';
 import { useState } from 'react';
+import { useAdminWebSocket } from '@/hooks/use-admin-websocket';
 
 interface DashboardClientProps {
   initialTvs: TV[];
@@ -14,6 +15,7 @@ interface DashboardClientProps {
 
 export function DashboardClient({ initialTvs, initialGroups }: DashboardClientProps) {
   const [showAddTvDialog, setShowAddTvDialog] = useState(false);
+  useAdminWebSocket();
 
   const unassignedTvs = initialTvs.filter(tv => !tv.groupId);
 

@@ -32,6 +32,16 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+   // This is to proxy WebSocket connections from the Next.js dev server to our custom WebSocket server.
+   // It's only for development and has no effect on the production build.
+  async rewrites() {
+    return [
+      {
+        source: '/socket.io',
+        destination: 'http://localhost:8081/socket.io',
+      },
+    ]
+  },
 };
 
 export default nextConfig;
