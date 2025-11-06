@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache'
 import * as data from './data'
 import { suggestTvGroupAssignment } from '@/ai/flows/ai-tv-group-assignment'
 import type { Ad, Playlist, PriorityStream, TV } from './definitions'
+import { notifyTv } from './notify';
 
 // --- Group Actions ---
 
@@ -36,7 +37,13 @@ export async function deleteGroupAction(groupId: string) {
 
 export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
     try {
-        await data.updateGroupTvs(groupId, tvIds);
+        const result = await data.updateGroupTvs(groupId, tvIds);
+
+        // Notify all affected TVs (both added and removed)
+        const allAffectedTvIds = new Set([...result.addedTvIds, ...result.removedTvIds]);
+        for (const tvId of allAffectedTvIds) {
+            await notifyTv(tvId);
+        }
 
         revalidatePath('/', 'layout');
         return { success: true, message: 'Group TVs updated.' };
@@ -49,6 +56,13 @@ export async function updateGroupTvsAction(groupId: string, tvIds: string[]) {
 export async function updateGroupPlaylistAction(groupId: string, playlistId: string | null) {
     try {
         await data.updateGroup(groupId, { playlistId });
+
+        // Notify all TVs in the group
+        const tvsInGroup = await data.getTvsByGroupId(groupId);
+        for (const tv of tvsInGroup) {
+            await notifyTv(tv.tvId);
+        }
+
         revalidatePath(`/groups/${groupId}`);
         revalidatePath('/groups');
         return { success: true, message: 'Group playlist updated.' };
@@ -86,6 +100,7 @@ export async function registerTvAction(tvId: string, name: string, shopLocation?
 export async function updateTvAction(tvId: string, tvData: Partial<Pick<TV, 'name' | 'shopLocation'>>) {
     try {
         await data.updateTv(tvId, tvData);
+        await notifyTv(tvId); // Notify the TV of potential name change
         revalidatePath('/', 'layout');
         return { success: true, message: `TV details updated.` };
     } catch (error) {
@@ -98,6 +113,7 @@ export async function updateTvAction(tvId: string, tvData: Partial<Pick<TV, 'nam
 export async function assignTvToGroupAction(tvId: string, groupId: string | null) {
   try {
     await data.updateTv(tvId, { groupId });
+    await notifyTv(tvId);
     
     revalidatePath('/', 'layout');
 
@@ -114,6 +130,7 @@ export async function removeFromGroupAction(tvId: string) {
         const tv = await data.getTvById(tvId);
         if (tv?.groupId) {
             await assignTvToGroupAction(tvId, null);
+            // assignTvToGroupAction already notifies
             return { success: true, message: 'TV removed from group.' };
         }
         return { success: false, message: 'TV is not in a group.'};
@@ -156,6 +173,13 @@ export async function deleteTvAction(tvId: string) {
 export async function startPriorityStreamAction(groupId: string, stream: PriorityStream) {
     try {
         await data.updatePriorityStream(groupId, stream);
+        
+        // Notify all TVs in the group
+        const tvsInGroup = await data.getTvsByGroupId(groupId);
+        for (const tv of tvsInGroup) {
+            await notifyTv(tv.tvId);
+        }
+
         revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Priority stream started.' };
     } catch (error) {
@@ -167,6 +191,13 @@ export async function startPriorityStreamAction(groupId: string, stream: Priorit
 export async function stopPriorityStreamAction(groupId: string) {
     try {
         await data.updatePriorityStream(groupId, null);
+
+        // Notify all TVs in the group
+        const tvsInGroup = await data.getTvsByGroupId(groupId);
+        for (const tv of tvsInGroup) {
+            await notifyTv(tv.tvId);
+        }
+
         revalidatePath(`/groups/${groupId}`, 'page');
         return { success: true, message: 'Priority stream stopped.' };
     } catch (error) {
@@ -249,6 +280,18 @@ export async function deletePlaylistAction(playlistId: string) {
 export async function updatePlaylistAdsAction(playlistId: string, adIds: string[]) {
     try {
         await data.updatePlaylist(playlistId, { adIds });
+
+        // Notify TVs in groups that use this playlist
+        const groups = await data.getGroupsByPlaylistId(playlistId);
+        const tvsToNotify = new Set<string>();
+        for (const group of groups) {
+            const tvs = await data.getTvsByGroupId(group.id);
+            tvs.forEach(tv => tvsToNotify.add(tv.tvId));
+        }
+
+        for (const tvId of tvsToNotify) {
+            await notifyTv(tvId);
+        }
 
         revalidatePath(`/playlists/${playlistId}`);
         return { success: true, message: 'Playlist updated.' };

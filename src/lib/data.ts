@@ -116,20 +116,35 @@ export const deleteGroup = async (groupId: string): Promise<boolean> => {
     return true;
 };
 
-export const updateGroupTvs = async (groupId: string, tvIds: string[]): Promise<boolean> => {
+export const updateGroupTvs = async (groupId: string, tvIdsToAssign: string[]): Promise<{ addedTvIds: string[], removedTvIds: string[] }> => {
     const batch = db.batch();
-    const snapshot = await db.collection("tvs").where("groupId", "==", groupId).get();
-    snapshot.forEach(docSnap => {
-        if (!tvIds.includes(docSnap.id)) {
-            batch.update(docSnap.ref, { groupId: null });
+    const tvsCurrentlyInGroupSnapshot = await db.collection("tvs").where("groupId", "==", groupId).get();
+    const currentTvIdsInGroup = new Set(tvsCurrentlyInGroupSnapshot.docs.map(d => d.id));
+    const newTvIdsToAssign = new Set(tvIdsToAssign);
+
+    const addedTvIds: string[] = [];
+    const removedTvIds: string[] = [];
+
+    // TVs to remove from group
+    for (const tvId of currentTvIdsInGroup) {
+        if (!newTvIdsToAssign.has(tvId)) {
+            const tvRef = db.collection("tvs").doc(tvId);
+            batch.update(tvRef, { groupId: null });
+            removedTvIds.push(tvId);
         }
-    });
-    for (const tvId of tvIds) {
-        const tvRef = db.collection("tvs").doc(tvId);
-        batch.update(tvRef, { groupId });
     }
+
+    // TVs to add to group
+    for (const tvId of newTvIdsToAssign) {
+        if (!currentTvIdsInGroup.has(tvId)) {
+            const tvRef = db.collection("tvs").doc(tvId);
+            batch.update(tvRef, { groupId });
+            addedTvIds.push(tvId);
+        }
+    }
+    
     await batch.commit();
-    return true;
+    return { addedTvIds, removedTvIds };
 };
 
 export const updatePriorityStream = async (groupId: string, stream: PriorityStream | null): Promise<Group | undefined> => {
