@@ -1,4 +1,4 @@
-import 'module-alias/register';
+
 import { createServer } from 'http';
 import next from 'next';
 import { WebSocketServer, WebSocket } from 'ws';

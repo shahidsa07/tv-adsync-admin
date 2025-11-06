@@ -10,9 +10,6 @@
     "typecheck": "tsc --noEmit",
     "postinstall": "patch-package"
   },
-  "_moduleAliases": {
-    "@": "dist"
-  },
   "dependencies": {
     "@genkit-ai/googleai": "^1.14.1",
     "@genkit-ai/next": "^1.14.1",
@@ -48,7 +45,6 @@
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.475.0",
-    "module-alias": "^2.2.3",
     "next": "15.3.3",
     "patch-package": "^8.0.0",
     "qrcode": "^1.5.3",
@@ -63,7 +59,6 @@
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.6",
-    "@types/module-alias": "^2.0.4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18",

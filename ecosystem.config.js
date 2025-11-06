@@ -2,9 +2,7 @@ module.exports = {
   apps: [
     {
       name: 'signagewise-app',
-      script: './dist/server.js',
-      // Arguments to pass to the Node.js interpreter
-      interpreter_args: "-r module-alias/register",
+      script: './.next/standalone/server.js',
       // Set the current working directory to the project root
       cwd: '.',
       // Ensure the app uses the environment variables from the user's shell
