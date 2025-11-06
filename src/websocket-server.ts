@@ -5,10 +5,10 @@ import { WebSocketServer, WebSocket } from 'ws';
 import { setTvOnlineStatusAction } from '@/lib/actions';
 import { createServer, IncomingMessage, ServerResponse } from 'http';
 import { config } from 'dotenv';
-import { URL } from 'url';
 config();
 
 const port = parseInt(process.env.PORT || '8081', 10);
+const hostname = '0.0.0.0'; // Listen on all available network interfaces
 const tvConnections = new Map<string, WebSocket>();
 const adminConnections = new Set<WebSocket>();
 
@@ -41,8 +41,9 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
                 
                 const ws = tvConnections.get(tvId);
                 if (ws && ws.readyState === WebSocket.OPEN) {
-                    ws.send(JSON.stringify({ action: 'refresh' }));
-                    console.log(`[HTTP Notify] Sent refresh to ${tvId}`);
+                    // Use the specified server-to-client message format
+                    ws.send(JSON.stringify({ type: 'REFRESH_STATE' }));
+                    console.log(`[HTTP Notify] Sent REFRESH_STATE to ${tvId}`);
                     res.writeHead(200, { 'Content-Type': 'application/json' });
                     res.end(JSON.stringify({ success: true, message: 'Notification sent.' }));
                 } else {
@@ -64,50 +65,64 @@ const server = createServer(async (req: IncomingMessage, res: ServerResponse) =>
 
 const wss = new WebSocketServer({ server });
 
-wss.on('connection', (ws, req) => {
-  const url = new URL(req.url || '', `http://${req.headers.host}`);
-  const tvId = url.searchParams.get('tvId');
-  const isAdmin = url.searchParams.get('clientType') === 'admin';
+wss.on('connection', (ws: WebSocket, req: IncomingMessage) => {
+    console.log('[WebSocket] A new client connected. Waiting for registration...');
 
-  if (isAdmin) {
-      console.log(`[WebSocket] Admin client connected.`);
-      adminConnections.add(ws);
-      ws.on('close', () => {
-          console.log(`[WebSocket] Admin client disconnected.`);
-          adminConnections.delete(ws);
-      });
-      ws.on('error', (error) => {
-          console.error(`[WebSocket] Error for admin client:`, error);
-          adminConnections.delete(ws);
-      });
+    let registeredTvId: string | null = null;
 
-  } else if (tvId) {
-    console.log(`[WebSocket] TV connected: ${tvId}`);
-    tvConnections.set(tvId, ws);
+    ws.on('message', (message: string) => {
+        try {
+            const parsedMessage = JSON.parse(message);
 
-    setTvOnlineStatusAction(tvId, true).then(() => {
-        broadcastToAdmins({ type: 'tv-status-changed', payload: { tvId, isOnline: true } });
-    }).catch(console.error);
+            if (parsedMessage.type === 'register' && parsedMessage.payload?.tvId) {
+                const tvId = parsedMessage.payload.tvId;
+                registeredTvId = tvId;
+
+                // Handle TV client registration
+                console.log(`[WebSocket] TV client registered with ID: ${tvId}`);
+                tvConnections.set(tvId, ws);
+
+                setTvOnlineStatusAction(tvId, true).then(() => {
+                    broadcastToAdmins({ type: 'tv-status-changed', payload: { tvId, isOnline: true } });
+                }).catch(console.error);
+
+            } else if (parsedMessage.type === 'register' && parsedMessage.payload?.clientType === 'admin') {
+                // Handle Admin client registration
+                console.log(`[WebSocket] Admin client registered.`);
+                adminConnections.add(ws);
+
+            } else {
+                console.warn(`[WebSocket] Received unknown message format from client.`);
+            }
+        } catch (e) {
+            console.error('[WebSocket] Error parsing message from client:', e);
+        }
+    });
 
     ws.on('close', () => {
-      console.log(`[WebSocket] TV disconnected: ${tvId}`);
-      tvConnections.delete(tvId);
-      setTvOnlineStatusAction(tvId, false).then(() => {
-          broadcastToAdmins({ type: 'tv-status-changed', payload: { tvId, isOnline: false } });
-      }).catch(console.error);
+        if (registeredTvId) {
+            console.log(`[WebSocket] TV client disconnected: ${registeredTvId}`);
+            tvConnections.delete(registeredTvId);
+            setTvOnlineStatusAction(registeredTvId, false).then(() => {
+                broadcastToAdmins({ type: 'tv-status-changed', payload: { tvId: registeredTvId, isOnline: false } });
+            }).catch(console.error);
+        } else if (adminConnections.has(ws)) {
+            console.log(`[WebSocket] Admin client disconnected.`);
+            adminConnections.delete(ws);
+        } else {
+            console.log('[WebSocket] Unregistered client disconnected.');
+        }
     });
 
     ws.on('error', (error) => {
-      console.error(`[WebSocket] Error for TV ${tvId}:`, error);
+        if (registeredTvId) {
+            console.error(`[WebSocket] Error for TV ${registeredTvId}:`, error);
+        } else {
+            console.error(`[WebSocket] Error for an unregistered client:`, error);
+        }
     });
-  } else {
-    console.log('[WebSocket] Connection rejected: No tvId or admin clientType provided.');
-    ws.close();
-  }
 });
 
-server.listen(port, () => {
-  console.log(`> WebSocket Server ready and listening on port ${port}`);
-  console.log(`> TV Clients connect to: ws://<your-server-ip>:${port}/?tvId=<ID>`);
-  console.log(`> Admin Clients connect to: ws://<your-server-ip>:${port}/?clientType=admin`);
+server.listen(port, hostname, () => {
+    console.log(`> WebSocket Server ready and listening on http://${hostname}:${port}`);
 });

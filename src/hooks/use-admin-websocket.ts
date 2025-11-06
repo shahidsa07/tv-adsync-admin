@@ -4,124 +4,83 @@
 import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 
-// --- IMPORTANT: CONFIGURE THIS ---
-const WEBSOCKET_URL_BASE = 'ws://YOUR_SERVER_IP_HERE:8081'; // <-- Replace with your server's IP
-// ---------------------------------
-
-
-export function useTvData(tvId: string | null) {
-  const [isLoading, setIsLoading] = useState(true);
-  const [isInGroup, setIsInGroup] = useState(false);
-  const [ads, setAds] = useState<Ad[]>([]);
-  const [priorityStream, setPriorityStream] = useState<PriorityStream | null>(
-    null
-  );
-  const ws = useRef<WebSocket | null>(null);
-  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
-
-
-  const fetchAndSetState = async (currentTvId: string) => {
-    try {
-      const state = await fetchTvState(currentTvId);
-      setIsInGroup(!!state.group);
-      setAds(state.playlist?.ads ?? []);
-      setPriorityStream(state.group?.priorityStream ?? null);
-      if (state.playlist?.ads) {
-        await cleanupCache(state.playlist.ads);
-        await processAds(state.playlist.ads, setAds);
-      }
-    } catch (error) {
-      console.error(error);
-      setIsInGroup(false);
-      setAds([]);
-      setPriorityStream(null);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+export function useAdminWebSocket() {
+  const router = useRouter();
+  const wsRef = useRef<WebSocket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connectWebSocket = () => {
-    if (!tvId) {
-        console.log("TV ID not provided. WebSocket connection skipped.");
+    // Prevent multiple concurrent connections
+    if (wsRef.current && (wsRef.current.readyState === WebSocket.OPEN || wsRef.current.readyState === WebSocket.CONNECTING)) {
         return;
     }
 
-    // Prevent multiple concurrent connection attempts
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-        console.log("WebSocket is already open.");
-        return;
-    }
-
-    const fullUrl = `${WEBSOCKET_URL_BASE}/?tvId=${tvId}`;
-    console.log(`Connecting to WebSocket: ${fullUrl}`);
+    // Dynamically construct the WebSocket URL, forcing port 8081 for production
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const host = window.location.hostname;
+    const isLocalDev = process.env.NODE_ENV === 'development';
+    const wsPort = isLocalDev ? '8081' : '8081'; // Explicitly use 8081 for both
     
-    ws.current = new WebSocket(fullUrl);
+    // In production, browsers might block insecure WebSocket (ws://) connections if the main site is on HTTPS.
+    // A reverse proxy is needed to handle wss:// traffic. For direct connection, this assumes ws:// is allowed.
+    // For this implementation, we will use ws:// directly as specified.
+    const wsUrl = `ws://${host}:${wsPort}`;
 
-    ws.current.onopen = () => {
-      console.log("WebSocket connection established.");
-      // Clear any pending reconnection timer
-      if (reconnectTimeout.current) {
-          clearTimeout(reconnectTimeout.current);
-          reconnectTimeout.current = null;
-      }
-    };
+    console.log(`[Admin] Connecting to WebSocket: ${wsUrl}`);
+    wsRef.current = new WebSocket(wsUrl);
 
-    ws.current.onmessage = (event) => {
-      try {
-        const message = JSON.parse(event.data);
-        console.log("Message from server:", message);
-        
-        // The server sends a refresh command when content changes
-        if (message.action === "refresh") {
-          console.log("Refresh command received, fetching new state.");
-          fetchAndSetState(tvId);
+    wsRef.current.onopen = () => {
+        console.log('[Admin] WebSocket connection established.');
+        if (reconnectTimeoutRef.current) {
+            clearTimeout(reconnectTimeoutRef.current);
+            reconnectTimeoutRef.current = null;
         }
-      } catch (e) {
-          console.error("Error parsing message from server:", e);
-      }
+        // Register this client as an "admin" type
+        wsRef.current?.send(JSON.stringify({ type: 'register', payload: { clientType: 'admin' } }));
     };
 
-    ws.current.onerror = (error) => {
-      console.error("WebSocket Error:", error.message);
-      // The onclose event will be fired next, which will handle reconnection.
-    };
-    
-    ws.current.onclose = () => {
-        console.log("WebSocket connection closed. Attempting to reconnect in 5 seconds...");
-        ws.current = null;
-        // Set a timeout to try and reconnect
-        if (!reconnectTimeout.current) {
-            reconnectTimeout.current = setTimeout(connectWebSocket, 5000);
+    wsRef.current.onmessage = (event) => {
+        try {
+            const message = JSON.parse(event.data);
+            console.log('[Admin] Received message:', message);
+            
+            // If the server tells us the status of a TV changed, refresh the page data
+            if (message.type === 'tv-status-changed') {
+                console.log('TV status changed, refreshing router...');
+                router.refresh();
+            }
+        } catch (error) {
+            console.error('[Admin] Error parsing WebSocket message:', error);
         }
-    }
-  }
+    };
 
+    wsRef.current.onclose = () => {
+        console.log('[Admin] WebSocket connection closed. Reconnecting...');
+        wsRef.current = null;
+        if (!reconnectTimeoutRef.current) {
+          reconnectTimeoutRef.current = setTimeout(connectWebSocket, 5000);
+        }
+    };
+
+    wsRef.current.onerror = (error) => {
+        console.error('[Admin] WebSocket error:', error);
+        wsRef.current?.close(); // This will trigger the onclose handler for reconnection
+    };
+  };
 
   useEffect(() => {
-    if (!tvId) {
-        setIsLoading(false);
-        return;
-    }
-
-    // Initial data fetch
-    fetchAndSetState(tvId);
-    
-    // Start WebSocket connection
     connectWebSocket();
 
-    // Cleanup function when the component unmounts or tvId changes
+    // Cleanup the connection when the component unmounts
     return () => {
-      if (reconnectTimeout.current) {
-        clearTimeout(reconnectTimeout.current);
-        reconnectTimeout.current = null;
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
       }
-      if (ws.current) {
-        console.log("Closing WebSocket connection due to component unmount or ID change.");
-        ws.current.close();
-        ws.current = null;
+      if (wsRef.current) {
+        // Set a specific code and reason for a clean, intentional closure
+        wsRef.current.close(1000, 'Component unmounting');
+        wsRef.current = null;
       }
     };
-  }, [tvId]);
-
-  return { isLoading, isInGroup, ads, priorityStream };
+  }, [router]); // router is a stable dependency
 }
