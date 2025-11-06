@@ -1,4 +1,5 @@
 'use server';
+import 'module-alias/register';
 
 // This is a standalone server for WebSocket connections.
 // It runs separately from the main Next.js app.
