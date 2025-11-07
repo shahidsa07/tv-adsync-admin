@@ -15,16 +15,10 @@ export function useAdminWebSocket() {
         return;
     }
 
-    // Dynamically construct the WebSocket URL, forcing port 8081 for production
+    // Construct the WebSocket URL to use the reverse proxy
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    const isLocalDev = process.env.NODE_ENV === 'development';
-    const wsPort = isLocalDev ? '8081' : '8081'; // Explicitly use 8081 for both
-    
-    // In production, browsers might block insecure WebSocket (ws://) connections if the main site is on HTTPS.
-    // A reverse proxy is needed to handle wss:// traffic. For direct connection, this assumes ws:// is allowed.
-    // For this implementation, we will use ws:// directly as specified.
-    const wsUrl = `ws://${host}:${wsPort}`;
+    const host = window.location.host; // e.g., "yourapp.com"
+    const wsUrl = `${protocol}//${host}/socket/`;
 
     console.log(`[Admin] Connecting to WebSocket: ${wsUrl}`);
     wsRef.current = new WebSocket(wsUrl);

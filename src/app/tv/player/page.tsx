@@ -68,11 +68,10 @@ function TVPlayer() {
   const connectWebSocket = () => {
     if (!tvId || wsRef.current) return;
 
-    // Dynamically construct the WebSocket URL
+    // Construct the WebSocket URL to use the reverse proxy
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.hostname;
-    const wsPort = '8081'; // As defined in ecosystem.config.js
-    const wsUrl = `${protocol}//${host}:${wsPort}/?tvId=${tvId}`;
+    const host = window.location.host; // e.g., "yourapp.com"
+    const wsUrl = `${protocol}//${host}/socket/?tvId=${tvId}`;
     
     console.log(`Connecting to WebSocket at ${wsUrl}`);
     
